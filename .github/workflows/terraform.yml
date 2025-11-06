@@ -1,18 +1,24 @@
-name: Terraform Deploy to AWS
+name: Terraform AWS Build/Destroy
 
 on:
-  push:
-    branches:
-      - main
   workflow_dispatch:
+    inputs:
+      action:
+        description: "Choose action: build or destroy"
+        required: true
+        default: "build"
+        type: choice
+        options:
+          - build
+          - destroy
 
 jobs:
   terraform:
     runs-on: ubuntu-latest
     env:
       TF_VAR_DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
-      AWS_ACCESS_KEY_ID: ${{ secrets.PIETER_AWS_ACCESS_KEY_ID }}
-      AWS_SECRET_ACCESS_KEY: ${{ secrets.PIETER_AWS_SECRET_ACCESS_KEY }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
       AWS_REGION: eu-central-1
 
     steps:
@@ -33,9 +39,9 @@ jobs:
       - name: Terraform Plan
         run: terraform plan -out=tfplan -input=false
 
-      - name: Terraform Apply / Destroy
+      - name: Terraform Apply or Destroy
         run: |
-          if [[ "${{ github.event.inputs.action }}" == "destroy" ]]; then
+          if [ "${{ github.event.inputs.action }}" == "destroy" ]; then
             terraform destroy -auto-approve
           else
             terraform apply -auto-approve tfplan
