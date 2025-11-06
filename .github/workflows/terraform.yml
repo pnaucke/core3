@@ -5,22 +5,15 @@ on:
     branches:
       - main
   workflow_dispatch:
-    inputs:
-      action:
-        description: 'Kies build of destroy'
-        required: true
-        default: 'build'
-        type: choice
-        options:
-          - build
-          - destroy
 
 jobs:
   terraform:
     runs-on: ubuntu-latest
     env:
+      TF_VAR_DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+      AWS_ACCESS_KEY_ID: ${{ secrets.PIETER_AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.PIETER_AWS_SECRET_ACCESS_KEY }}
       AWS_REGION: eu-central-1
-      DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
 
     steps:
       - name: Checkout repository
@@ -30,13 +23,6 @@ jobs:
         uses: hashicorp/setup-terraform@v2
         with:
           terraform_version: 1.13.2
-
-      - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v2
-        with:
-          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: eu-central-1
 
       - name: Terraform Init
         run: terraform init -input=false -upgrade
@@ -49,8 +35,8 @@ jobs:
 
       - name: Terraform Apply / Destroy
         run: |
-          if [ "${{ github.event.inputs.action }}" == "build" ]; then
-            terraform apply -auto-approve tfplan
-          else
+          if [[ "${{ github.event.inputs.action }}" == "destroy" ]]; then
             terraform destroy -auto-approve
+          else
+            terraform apply -auto-approve tfplan
           fi

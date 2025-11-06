@@ -1,4 +1,4 @@
-# Webserver security group
+# Webserver Security Group
 resource "aws_security_group" "web_sg" {
   name   = "web-sg-${random_id.suffix.hex}"
   vpc_id = aws_vpc.hr_vpc.id
@@ -14,7 +14,7 @@ resource "aws_security_group" "web_sg" {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = ["82.170.150.87/32", "145.93.76.108/32"]
+    cidr_blocks = ["82.170.150.87/32", "145.93.76.166/32"]
   }
 
   egress {
@@ -25,7 +25,7 @@ resource "aws_security_group" "web_sg" {
   }
 }
 
-# Database security group
+# Database Security Group
 resource "aws_security_group" "db_sg" {
   name   = "db-sg-${random_id.suffix.hex}"
   vpc_id = aws_vpc.hr_vpc.id
@@ -38,7 +38,7 @@ resource "aws_security_group" "db_sg" {
   }
 }
 
-# Allow webserver to access DB
+# Allow DB access only from webserver
 resource "aws_security_group_rule" "db_from_web" {
   type                     = "ingress"
   from_port                = 3306
