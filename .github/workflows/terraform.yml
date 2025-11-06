@@ -1,0 +1,43 @@
+name: Terraform
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Kies build of destroy'
+        required: true
+        default: 'build'
+        type: choice
+        options:
+          - build
+          - destroy
+
+jobs:
+  terraform:
+    runs-on: ubuntu-latest
+    env:
+      AWS_ACCESS_KEY_ID: ${{ secrets.PIETER_AWS_ACCESS_KEY_ID }}
+      AWS_SECRET_ACCESS_KEY: ${{ secrets.PIETER_AWS_SECRET_ACCESS_KEY }}
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v3
+
+    - name: Setup Terraform
+      uses: hashicorp/setup-terraform@v2
+      with:
+        terraform_version: 1.5.0
+
+    - name: Terraform Init
+      run: terraform init
+
+    - name: Terraform Plan
+      run: terraform plan -out=tfplan
+
+    - name: Terraform Apply/Destroy
+      run: |
+        if [ "${{ github.event.inputs.action }}" == "build" ]; then
+          terraform apply -auto-approve tfplan
+        else
+          terraform destroy -auto-approve
+        fi
