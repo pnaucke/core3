@@ -1,17 +1,23 @@
-# Database Subnet Group
+# -------------------------------
+# DB Subnet Group
+# -------------------------------
 resource "aws_db_subnet_group" "db_subnet_group" {
   name       = "db-subnet-group"
-  subnet_ids = [aws_subnet.db_subnet.id]  # Gebruik de subnet uit network.tf
+  subnet_ids = [aws_subnet.db_subnet.id]  # matcht je network.tf
 }
 
-# Variable voor DB wachtwoord (komt uit GitHub secret via TF_VAR_DB_PASSWORD)
+# -------------------------------
+# Variable voor DB wachtwoord
+# -------------------------------
 variable "DB_PASSWORD" {
   description = "Database password from GitHub secret"
   type        = string
   sensitive   = true
 }
 
+# -------------------------------
 # RDS Database
+# -------------------------------
 resource "aws_db_instance" "db" {
   identifier              = "mydb-${random_id.suffix.hex}"
   allocated_storage       = 20
@@ -26,4 +32,8 @@ resource "aws_db_instance" "db" {
   vpc_security_group_ids  = [aws_security_group.db_sg.id]
   db_subnet_group_name    = aws_db_subnet_group.db_subnet_group.name
   publicly_accessible     = false
+
+  tags = {
+    Name = "HR-Database"
+  }
 }
