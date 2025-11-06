@@ -1,7 +1,10 @@
-# DB Subnet Group (1 subnet, werkt zoals in oud project)
+# DB Subnet Group (minimaal 2 AZs)
 resource "aws_db_subnet_group" "db_subnet_group" {
   name       = "db-subnet-group"
-  subnet_ids = [aws_subnet.subnet_db_private.id]
+  subnet_ids = [
+    aws_subnet.subnet_db_private.id,
+    aws_subnet.subnet_db_private_2.id
+  ]
 }
 
 # DB wachtwoord uit GitHub secret
@@ -11,7 +14,7 @@ variable "DB_PASSWORD" {
   sensitive   = true
 }
 
-# RDS Database
+# RDS Database (Single instance)
 resource "aws_db_instance" "db" {
   identifier              = "mydb-${random_id.suffix.hex}"
   allocated_storage       = 20
