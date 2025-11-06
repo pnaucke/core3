@@ -1,6 +1,9 @@
 name: Terraform
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       action:
@@ -15,6 +18,7 @@ on:
 jobs:
   terraform:
     runs-on: ubuntu-latest
+    # AWS credentials beschikbaar voor alle stappen
     env:
       AWS_ACCESS_KEY_ID: ${{ secrets.PIETER_AWS_ACCESS_KEY_ID }}
       AWS_SECRET_ACCESS_KEY: ${{ secrets.PIETER_AWS_SECRET_ACCESS_KEY }}
@@ -34,7 +38,7 @@ jobs:
     - name: Terraform Plan
       run: terraform plan -out=tfplan
 
-    - name: Terraform Apply/Destroy
+    - name: Terraform Apply or Destroy
       run: |
         if [ "${{ github.event.inputs.action }}" == "build" ]; then
           terraform apply -auto-approve tfplan
