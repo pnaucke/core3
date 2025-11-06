@@ -1,16 +1,15 @@
-name: Terraform AWS Build/Destroy
+name: Terraform Deploy to AWS
 
 on:
+  push:
+    branches:
+      - main
   workflow_dispatch:
     inputs:
       action:
-        description: "Choose action: build or destroy"
+        description: 'Build or Destroy'
         required: true
-        default: "build"
-        type: choice
-        options:
-          - build
-          - destroy
+        default: 'build'
 
 jobs:
   terraform:
@@ -39,11 +38,10 @@ jobs:
       - name: Terraform Plan
         run: terraform plan -out=tfplan -input=false
 
-      - name: Terraform Apply or Destroy
+      - name: Terraform Apply / Destroy
         run: |
-          if [ "${{ github.event.inputs.action }}" == "destroy" ]; then
+          if [[ "${{ github.event.inputs.action }}" == "destroy" ]]; then
             terraform destroy -auto-approve
           else
             terraform apply -auto-approve tfplan
           fi
-

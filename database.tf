@@ -1,10 +1,7 @@
-# DB Subnet Group (minimaal 2 AZs)
+# DB Subnet Group (1 subnet, werkt zoals in oud project)
 resource "aws_db_subnet_group" "db_subnet_group" {
   name       = "db-subnet-group"
-  subnet_ids = [
-    aws_subnet.subnet_db_private_1.id,
-    aws_subnet.subnet_db_private_2.id
-  ]
+  subnet_ids = [aws_subnet.subnet_db_private.id]
 }
 
 # DB wachtwoord uit GitHub secret
