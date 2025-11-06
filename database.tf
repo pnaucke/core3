@@ -1,10 +1,20 @@
-# DB Subnet Group
+# DB Subnet Group (minimaal 2 AZs)
 resource "aws_db_subnet_group" "db_subnet_group" {
   name       = "db-subnet-group"
-  subnet_ids = [aws_subnet.subnet_db_private.id]
+  subnet_ids = [
+    aws_subnet.subnet_db_private_1.id,
+    aws_subnet.subnet_db_private_2.id
+  ]
 }
 
-# Database
+# DB wachtwoord uit GitHub secret
+variable "DB_PASSWORD" {
+  description = "Database password from GitHub secret"
+  type        = string
+  sensitive   = true
+}
+
+# RDS Database
 resource "aws_db_instance" "db" {
   identifier              = "mydb-${random_id.suffix.hex}"
   allocated_storage       = 20
@@ -20,11 +30,4 @@ resource "aws_db_instance" "db" {
   db_subnet_group_name    = aws_db_subnet_group.db_subnet_group.name
   publicly_accessible     = false
   tags = { Name = "HR-Database" }
-}
-
-# DB wachtwoord als variabele (secret via GitHub)
-variable "DB_PASSWORD" {
-  description = "Database password from GitHub secret"
-  type        = string
-  sensitive   = true
 }
