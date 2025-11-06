@@ -1,12 +1,12 @@
 locals {
   user_data = <<-EOF
-    #!/bin/bash
-    yum update -y
-    yum install -y nginx
-    echo "<h1>Hello World from HR Webserver</h1>" > /usr/share/nginx/html/index.html
-    systemctl enable nginx
-    systemctl start nginx
-  EOF
+              #!/bin/bash
+              yum update -y
+              yum install -y nginx
+              echo "<h1>Hello World from HR Webserver</h1>" > /usr/share/nginx/html/index.html
+              systemctl enable nginx
+              systemctl start nginx
+              EOF
 }
 
 resource "aws_instance" "web1" {

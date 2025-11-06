@@ -20,7 +20,7 @@ jobs:
     runs-on: ubuntu-latest
     env:
       AWS_REGION: eu-central-1
-      TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
+      DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
 
     steps:
       - name: Checkout repository
@@ -29,17 +29,17 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
         with:
-          terraform_version: 1.5.0
+          terraform_version: 1.13.2
 
-      - name: Terraform Init (met backend credentials)
-        run: |
-          terraform init \
-            -backend-config="bucket=innovatech-terraform-state" \
-            -backend-config="key=terraform.tfstate" \
-            -backend-config="region=eu-central-1" \
-            -backend-config="dynamodb_table=terraform-locks" \
-            -backend-config="access_key=${{ secrets.PIETER_AWS_ACCESS_KEY_ID }}" \
-            -backend-config="secret_key=${{ secrets.PIETER_AWS_SECRET_ACCESS_KEY }}"
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.PIETER_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.PIETER_AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-central-1
+
+      - name: Terraform Init
+        run: terraform init -input=false -upgrade
 
       - name: Terraform Validate
         run: terraform validate

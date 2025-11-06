@@ -25,7 +25,17 @@ provider "aws" {
   region = "eu-central-1"
 }
 
-# Random suffix for unique resource names
+# AMI for webserver
+data "aws_ami" "amazon_linux" {
+  most_recent = true
+  owners      = ["amazon"]
+  filter {
+    name   = "name"
+    values = ["amzn2-ami-hvm-*-x86_64-gp2"]
+  }
+}
+
+# Random suffix for unique names
 resource "random_id" "suffix" {
   byte_length = 2
 }
