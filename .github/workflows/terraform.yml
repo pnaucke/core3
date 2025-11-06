@@ -1,4 +1,4 @@
-name: Terraform Deploy - ${{ github.event.head_commit.message }}
+nname: Terraform Deploy to AWS
 
 on:
   push:
