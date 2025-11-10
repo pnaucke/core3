@@ -10,6 +10,8 @@ data "aws_ami" "amazon_linux" {
 locals {
   user_data = <<-EOT
     #!/bin/bash
+    set -e
+
     yum update -y
     amazon-linux-extras enable nginx1
     yum install -y nginx mysql
@@ -19,12 +21,19 @@ locals {
 
     MY_IP=$(curl -s http://169.254.169.254/latest/meta-data/local-ipv4)
 
-    DB_TEST="OK"
-    mysql -h ${aws_db_instance.db.address} -uadmin -p${var.db_password} -e "SELECT 1;" > /dev/null 2>&1
-    if [ $? -ne 0 ]; then
-      DB_TEST="FAILED"
-    fi
+    # Basis HTML alvast tonen
+    echo "<h1>Welkom bij mijn website!</h1>" > /usr/share/nginx/html/index.html
+    echo "<p>Deze webserver IP: $MY_IP</p>" >> /usr/share/nginx/html/index.html
+    echo "<p>Database verbindingstest: nog bezig...</p>" >> /usr/share/nginx/html/index.html
 
+    # Wacht zodat DB kan opstarten
+    sleep 15
+
+    # DB connectie testen
+    DB_TEST="OK"
+    mysql -h ${aws_db_instance.db.address} -uadmin -p${var.db_password} -e "SELECT 1;" > /dev/null 2>&1 || DB_TEST="FAILED"
+
+    # Overschrijf pagina met echte DB status
     echo "<h1>Welkom bij mijn website!</h1>" > /usr/share/nginx/html/index.html
     echo "<p>Deze webserver IP: $MY_IP</p>" >> /usr/share/nginx/html/index.html
     echo "<p>Database verbindingstest: $DB_TEST</p>" >> /usr/share/nginx/html/index.html
