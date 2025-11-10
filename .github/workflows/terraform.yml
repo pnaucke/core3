@@ -1,9 +1,7 @@
-name: Terraform Destroy
+name: Terraform Auto Destroy
 
 on:
-  push:
-    branches:
-      - main
+  push: {}  # Trigger bij elke push naar elke branch
 
 jobs:
   terraform:
