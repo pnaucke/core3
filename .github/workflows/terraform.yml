@@ -1,7 +1,7 @@
 name: Terraform Auto Deploy
 
 on:
-  push: {}  # Trigger bij elke push naar elke branch
+  push: {}  # trigger bij elke push
 
 jobs:
   terraform:
@@ -30,7 +30,7 @@ jobs:
         run: terraform init -input=false -upgrade
 
       - name: Terraform Plan
-        run: terraform plan -out=tfplan -input=false
+        run: terraform plan -out=tfplan -input=false -var "db_password=$TF_VAR_DB_PASSWORD"
 
       - name: Terraform Apply
-        run: terraform apply -auto-approve tfplan
+        run: terraform apply -auto-approve tfplan -var "db_password=$TF_VAR_DB_PASSWORD"

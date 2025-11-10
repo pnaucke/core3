@@ -1,7 +1,7 @@
-# Web Security Group
+# Webserver Security Group
 resource "aws_security_group" "web_sg" {
   name   = "web-sg-${random_id.suffix.hex}"
-  vpc_id = aws_vpc.main.id
+  vpc_id = aws_vpc.main_vpc.id
 
   ingress {
     from_port   = 80
@@ -25,10 +25,10 @@ resource "aws_security_group" "web_sg" {
   }
 }
 
-# DB Security Group
+# Database Security Group
 resource "aws_security_group" "db_sg" {
   name   = "db-sg-${random_id.suffix.hex}"
-  vpc_id = aws_vpc.main.id
+  vpc_id = aws_vpc.main_vpc.id
 
   ingress {
     from_port       = 3306
