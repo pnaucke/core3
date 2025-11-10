@@ -10,15 +10,6 @@ resource "aws_db_subnet_group" "db_subnet_group" {
 }
 
 # ----------------------
-# Terraform Variable voor Database Wachtwoord
-# ----------------------
-variable "db_password" {
-  description = "Wachtwoord voor de RDS database"
-  type        = string
-  sensitive   = true
-}
-
-# ----------------------
 # RDS Database
 # ----------------------
 resource "aws_db_instance" "db" {
