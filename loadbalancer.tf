@@ -1,23 +1,16 @@
-# ----------------------
-# Application Load Balancer
-# ----------------------
 resource "aws_lb" "web_lb" {
-  name               = "web-lb-${random_id.suffix.hex}"
+  name               = "web-lb"
   internal           = false
   load_balancer_type = "application"
   subnets            = [aws_subnet.web1_subnet.id, aws_subnet.web2_subnet.id]
   security_groups    = [aws_security_group.web_sg.id]
-  tags = { Name = "web-lb" }
 }
 
-# ----------------------
-# Target Group voor Webservers
-# ----------------------
 resource "aws_lb_target_group" "web_tg" {
-  name        = "web-tg-${random_id.suffix.hex}"
+  name        = "web-tg"
   port        = 80
   protocol    = "HTTP"
-  vpc_id      = aws_vpc.main_vpc.id
+  vpc_id      = aws_vpc.main.id
   target_type = "instance"
 
   health_check {
@@ -29,13 +22,8 @@ resource "aws_lb_target_group" "web_tg" {
     healthy_threshold   = 2
     unhealthy_threshold = 2
   }
-
-  tags = { Name = "web-tg" }
 }
 
-# ----------------------
-# Listener Load Balancer
-# ----------------------
 resource "aws_lb_listener" "web_listener" {
   load_balancer_arn = aws_lb.web_lb.arn
   port              = 80
@@ -47,9 +35,6 @@ resource "aws_lb_listener" "web_listener" {
   }
 }
 
-# ----------------------
-# Target Group Attachments
-# ----------------------
 resource "aws_lb_target_group_attachment" "web1_attach" {
   target_group_arn = aws_lb_target_group.web_tg.arn
   target_id        = aws_instance.web1.id

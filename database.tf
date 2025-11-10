@@ -1,7 +1,6 @@
 resource "aws_db_subnet_group" "db_subnet_group" {
   name       = "db-subnet-group"
   subnet_ids = [aws_subnet.db_subnet1.id, aws_subnet.db_subnet2.id]
-  tags = { Name = "db-subnet-group" }
 }
 
 resource "aws_db_instance" "db" {
@@ -18,5 +17,4 @@ resource "aws_db_instance" "db" {
   vpc_security_group_ids  = [aws_security_group.db_sg.id]
   db_subnet_group_name    = aws_db_subnet_group.db_subnet_group.name
   publicly_accessible     = false
-  tags = { Name = "rds-${random_id.suffix.hex}" }
 }

@@ -1,5 +1,4 @@
 variable "db_password" {
-  description = "Wachtwoord voor de RDS database"
+  description = "Database password"
   type        = string
-  sensitive   = true
 }
