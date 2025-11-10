@@ -1,9 +1,9 @@
-name: Terraform Deploy
+name: Terraform Auto Deploy
 
 on:
   push:
     branches:
-      - main
+      - main  # start automatisch bij elke push naar main
 
 jobs:
   terraform:
