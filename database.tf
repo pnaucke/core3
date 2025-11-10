@@ -1,17 +1,26 @@
-# Database subnet group
+# ----------------------
+# Database Subnet Group
+# ----------------------
 resource "aws_db_subnet_group" "db_subnet_group" {
   name       = "db-subnet-group"
   subnet_ids = [aws_subnet.db_subnet1.id, aws_subnet.db_subnet2.id]
+  tags = {
+    Name = "db-subnet-group"
+  }
 }
 
-# Database variable
+# ----------------------
+# Terraform Variable voor Database Wachtwoord
+# ----------------------
 variable "db_password" {
   description = "Wachtwoord voor de RDS database"
   type        = string
   sensitive   = true
 }
 
-# RDS instance
+# ----------------------
+# RDS Database
+# ----------------------
 resource "aws_db_instance" "db" {
   identifier              = "mydb-${random_id.suffix.hex}"
   allocated_storage       = 20
@@ -26,4 +35,7 @@ resource "aws_db_instance" "db" {
   vpc_security_group_ids  = [aws_security_group.db_sg.id]
   db_subnet_group_name    = aws_db_subnet_group.db_subnet_group.name
   publicly_accessible     = false
+  tags = {
+    Name = "rds-${random_id.suffix.hex}"
+  }
 }
