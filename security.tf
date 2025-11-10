@@ -1,4 +1,3 @@
-# Webserver Security Group
 resource "aws_security_group" "web_sg" {
   name   = "web-sg-${random_id.suffix.hex}"
   vpc_id = aws_vpc.main_vpc.id
@@ -25,7 +24,6 @@ resource "aws_security_group" "web_sg" {
   }
 }
 
-# Database Security Group
 resource "aws_security_group" "db_sg" {
   name   = "db-sg-${random_id.suffix.hex}"
   vpc_id = aws_vpc.main_vpc.id

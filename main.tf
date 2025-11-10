@@ -1,9 +1,9 @@
 terraform {
   backend "s3" {
-    bucket         = "innovatech-terraform-state"
-    key            = "terraform.tfstate"
-    region         = "eu-central-1"
-    encrypt        = true
+    bucket  = "innovatech-terraform-state"
+    key     = "terraform.tfstate"
+    region  = "eu-central-1"
+    encrypt = true
   }
 
   required_providers {
@@ -24,7 +24,6 @@ provider "aws" {
   region = "eu-central-1"
 }
 
-# Random suffix voor unieke namen
 resource "random_id" "suffix" {
   byte_length = 2
 }

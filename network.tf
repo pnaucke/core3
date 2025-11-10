@@ -1,18 +1,10 @@
-# ----------------------
-# VPC
-# ----------------------
 resource "aws_vpc" "main_vpc" {
-  cidr_block = "172.31.0.0/16"
+  cidr_block           = "172.31.0.0/16"
   enable_dns_support   = true
   enable_dns_hostnames = true
-  tags = {
-    Name = "main-vpc"
-  }
+  tags = { Name = "main-vpc" }
 }
 
-# ----------------------
-# Subnets
-# ----------------------
 resource "aws_subnet" "web1_subnet" {
   vpc_id                  = aws_vpc.main_vpc.id
   cidr_block              = "172.31.1.0/24"
