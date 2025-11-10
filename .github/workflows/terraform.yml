@@ -1,7 +1,9 @@
-name: Terraform Destroy
+name: Terraform Auto Destroy
 
 on:
-  workflow_dispatch:
+  push:
+    branches:
+      - main
 
 jobs:
   destroy:
