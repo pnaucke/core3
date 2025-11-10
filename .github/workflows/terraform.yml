@@ -1,9 +1,7 @@
-name: Terraform Deploy to AWS
+name: Terraform Auto Deploy
 
 on:
-  push:
-    branches:
-      - main
+  push: {}  # Trigger bij elke push naar elke branch
 
 jobs:
   terraform:
