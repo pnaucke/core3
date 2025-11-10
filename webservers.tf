@@ -10,22 +10,39 @@ data "aws_ami" "amazon_linux" {
 locals {
   user_data = <<-EOT
     #!/bin/bash
+    set -e
+
     yum update -y
     amazon-linux-extras enable nginx1
-    yum install -y nginx gettext
+    yum install -y nginx mysql
 
     systemctl start nginx
     systemctl enable nginx
 
-    # Website folder kopiëren
-    mkdir -p /home/ec2-user/website
-    cp -r /home/ec2-user/terraform/website/* /usr/share/nginx/html/
+    MY_IP=$(curl -s http://169.254.169.254/latest/meta-data/local-ipv4)
 
-    # Optioneel placeholders vervangen in HTML
-    for file in /usr/share/nginx/html/*.html; do
-      envsubst < "$file" > "${file}.tmp"
-      mv "${file}.tmp" "$file"
-    done
+    # Basis HTML alvast tonen
+    echo "<h1>Welkom bij mijn website!</h1>" > /usr/share/nginx/html/index.html
+    echo "<p>Deze webserver IP: $MY_IP</p>" >> /usr/share/nginx/html/index.html
+    echo "<p>Database verbindingstest: nog bezig...</p>" >> /usr/share/nginx/html/index.html
+
+    # Wacht zodat DB kan opstarten
+    sleep 15
+
+    # DB connectie testen
+    DB_TEST="OK"
+    mysql -h ${aws_db_instance.db.address} -uadmin -p${var.db_password} -e "SELECT 1;" > /dev/null 2>&1 || DB_TEST="FAILED"
+
+    # Overschrijf pagina met echte DB status
+    echo "<h1>Welkom bij mijn website!</h1>" > /usr/share/nginx/html/index.html
+    echo "<p>Deze webserver IP: $MY_IP</p>" >> /usr/share/nginx/html/index.html
+    echo "<p>Database verbindingstest: $DB_TEST</p>" >> /usr/share/nginx/html/index.html
+
+    echo "DB_HOST=${aws_db_instance.db.address}" >> /etc/environment
+    echo "DB_PORT=${aws_db_instance.db.port}" >> /etc/environment
+    echo "DB_USER=admin" >> /etc/environment
+    echo "DB_PASS=${var.db_password}" >> /etc/environment
+    echo "DB_NAME=myappdb" >> /etc/environment
   EOT
 }
 
