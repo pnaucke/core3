@@ -1,4 +1,39 @@
 # ----------------------
+# CPU Alarms per Webserver
+# ----------------------
+resource "aws_cloudwatch_metric_alarm" "cpu_high_web1" {
+  alarm_name          = "cpu-high-webserver1"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 1
+  metric_name         = "CPUUtilization"
+  namespace           = "AWS/EC2"
+  period              = 60
+  statistic           = "Average"
+  threshold           = 80
+  alarm_description   = "CPU utilization hoger dan 80% voor Webserver1"
+  alarm_actions       = [] # optioneel
+  dimensions = {
+    InstanceId = aws_instance.webserver1.id
+  }
+}
+
+resource "aws_cloudwatch_metric_alarm" "cpu_high_web2" {
+  alarm_name          = "cpu-high-webserver2"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 1
+  metric_name         = "CPUUtilization"
+  namespace           = "AWS/EC2"
+  period              = 60
+  statistic           = "Average"
+  threshold           = 80
+  alarm_description   = "CPU utilization hoger dan 80% voor Webserver2"
+  alarm_actions       = [] # optioneel
+  dimensions = {
+    InstanceId = aws_instance.webserver2.id
+  }
+}
+
+# ----------------------
 # CloudWatch Dashboard
 # ----------------------
 resource "aws_cloudwatch_dashboard" "web_dashboard" {
@@ -6,106 +41,72 @@ resource "aws_cloudwatch_dashboard" "web_dashboard" {
 
   dashboard_body = jsonencode({
     widgets = [
-      # CPU Usage grafiek (time series)
+      # Paneel 1: CPU grafiek voor beide webservers
       {
         type = "metric"
         x = 0
         y = 0
-        width = 24
+        width = 12
         height = 6
         properties = {
           view = "timeSeries"
-          title = "CPU Usage Webservers"
-          region = "eu-central-1"
           stacked = false
+          region = "eu-central-1"
+          title = "CPU Usage Webservers"
           metrics = [
-            ["AWS/EC2", "CPUUtilization", "InstanceId", aws_instance.web1.id, { "stat": "Average", "color": "#1f77b4", "label": "Webserver1" }],
-            ["AWS/EC2", "CPUUtilization", "InstanceId", aws_instance.web2.id, { "stat": "Average", "color": "#ff7f0e", "label": "Webserver2" }]
+            ["AWS/EC2", "CPUUtilization", "InstanceId", aws_instance.webserver1.id, { "stat": "Average", "label": "Webserver1 CPU", "color": "#1f77b4" }],
+            ["AWS/EC2", "CPUUtilization", "InstanceId", aws_instance.webserver2.id, { "stat": "Average", "label": "Webserver2 CPU", "color": "#ff7f0e" }]
           ]
-          yAxis = { left = { min = 0, max = 100 } }
           period = 60
+          yAxis = {
+            left = {
+              min = 0
+              max = 100
+              label = "CPU %"
+            }
+          }
         }
       },
 
-      # CPU single value Webserver1
+      # Paneel 2: Uptime Webserver1
       {
         type = "metric"
         x = 0
         y = 7
-        width = 12
-        height = 4
+        width = 6
+        height = 3
         properties = {
           view = "singleValue"
-          title = "Webserver1 CPU"
           region = "eu-central-1"
-          metrics = [
-            ["AWS/EC2", "CPUUtilization", "InstanceId", aws_instance.web1.id, { "stat": "Average", "label": "CPU %" }]
-          ]
-          period = 60
-          stat = "Average"
-        }
-      },
-
-      # CPU single value Webserver2
-      {
-        type = "metric"
-        x = 12
-        y = 7
-        width = 12
-        height = 4
-        properties = {
-          view = "singleValue"
-          title = "Webserver2 CPU"
-          region = "eu-central-1"
-          metrics = [
-            ["AWS/EC2", "CPUUtilization", "InstanceId", aws_instance.web2.id, { "stat": "Average", "label": "CPU %" }]
-          ]
-          period = 60
-          stat = "Average"
-        }
-      },
-
-      # Uptime Webserver1 (Up / Down)
-      {
-        type = "metric"
-        x = 0
-        y = 12
-        width = 12
-        height = 4
-        properties = {
-          view = "singleValue"
           title = "Webserver1 Uptime"
-          region = "eu-central-1"
           metrics = [
-            # ALB UnhealthyHostCount metric
-            ["AWS/ApplicationELB", "UnhealthyHostCount", "TargetGroup", aws_lb_target_group.web_tg.arn_suffix, "LoadBalancer", aws_lb.web_lb.arn_suffix, { "id": "m1" }],
-            # Metric math: 1 = Up, 0 = Down
-            [{ "expression": "IF(m1==0,1,0)", "label": "Up", "color": "#2ca02c" }]
+            ["AWS/EC2", "StatusCheckFailed_Instance", "InstanceId", aws_instance.webserver1.id, { "stat": "Maximum", "label": "Webserver1" }]
           ]
           period = 60
-          stat = "Maximum"
-          yAxis = { left = { min = 0, max = 1 } }
+          annotations = {}
+          setPeriodToTimeRange = true
+          sparkline = false
         }
       },
 
-      # Uptime Webserver2 (Up / Down)
+      # Paneel 3: Uptime Webserver2
       {
         type = "metric"
-        x = 12
-        y = 12
-        width = 12
-        height = 4
+        x = 6
+        y = 7
+        width = 6
+        height = 3
         properties = {
           view = "singleValue"
-          title = "Webserver2 Uptime"
           region = "eu-central-1"
+          title = "Webserver2 Uptime"
           metrics = [
-            ["AWS/ApplicationELB", "UnhealthyHostCount", "TargetGroup", aws_lb_target_group.web_tg.arn_suffix, "LoadBalancer", aws_lb.web_lb.arn_suffix, { "id": "m2" }],
-            [{ "expression": "IF(m2==0,1,0)", "label": "Up", "color": "#2ca02c" }]
+            ["AWS/EC2", "StatusCheckFailed_Instance", "InstanceId", aws_instance.webserver2.id, { "stat": "Maximum", "label": "Webserver2" }]
           ]
           period = 60
-          stat = "Maximum"
-          yAxis = { left = { min = 0, max = 1 } }
+          annotations = {}
+          setPeriodToTimeRange = true
+          sparkline = false
         }
       }
     ]
