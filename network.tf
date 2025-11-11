@@ -5,7 +5,7 @@ resource "aws_vpc" "main_vpc" {
   cidr_block           = "172.31.0.0/16"
   enable_dns_support   = true
   enable_dns_hostnames = true
-  tags = { Name = "main-vpc" }
+  tags = { Name = "VPC-HR" }
 }
 
 # ----------------------
@@ -16,15 +16,15 @@ resource "aws_subnet" "web1_subnet" {
   cidr_block              = "172.31.1.0/24"
   availability_zone       = "eu-central-1a"
   map_public_ip_on_launch = true
-  tags = { Name = "web1-subnet" }
+  tags = { Name = "subnet_web_public1" }
 }
 
 resource "aws_subnet" "web2_subnet" {
   vpc_id                  = aws_vpc.main_vpc.id
-  cidr_block              = "172.31.2.0/24"
+  cidr_block              = "172.31.11.0/24"
   availability_zone       = "eu-central-1b"
   map_public_ip_on_launch = true
-  tags = { Name = "web2-subnet" }
+  tags = { Name = "subnet_web_public2" }
 }
 
 # ----------------------
@@ -32,18 +32,18 @@ resource "aws_subnet" "web2_subnet" {
 # ----------------------
 resource "aws_subnet" "db_subnet1" {
   vpc_id                  = aws_vpc.main_vpc.id
-  cidr_block              = "172.31.3.0/24"
+  cidr_block              = "172.31.21.0/24"
   availability_zone       = "eu-central-1b"
   map_public_ip_on_launch = false
-  tags = { Name = "db-subnet-1" }
+  tags = { Name = "subnet_db_private1" }
 }
 
 resource "aws_subnet" "db_subnet2" {
   vpc_id                  = aws_vpc.main_vpc.id
-  cidr_block              = "172.31.4.0/24"
+  cidr_block              = "172.31.22.0/24"
   availability_zone       = "eu-central-1c"
   map_public_ip_on_launch = false
-  tags = { Name = "db-subnet-2" }
+  tags = { Name = "subnet_db_private2" }
 }
 
 # ----------------------
@@ -51,7 +51,7 @@ resource "aws_subnet" "db_subnet2" {
 # ----------------------
 resource "aws_internet_gateway" "main_igw" {
   vpc_id = aws_vpc.main_vpc.id
-  tags = { Name = "main-igw" }
+  tags = { Name = "VPC-HR-IGW" }
 }
 
 # ----------------------

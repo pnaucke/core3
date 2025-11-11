@@ -2,7 +2,7 @@
 # Security Group Webservers
 # ----------------------
 resource "aws_security_group" "web_sg" {
-  name   = "web-sg-${random_id.suffix.hex}"
+  name   = "sg_webserver-${random_id.suffix.hex}"
   vpc_id = aws_vpc.main_vpc.id
 
   ingress {
@@ -16,7 +16,7 @@ resource "aws_security_group" "web_sg" {
     from_port   = 22
     to_port     = 22
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = ["82.170.150.87/32", "145.93.76.108/32"]
   }
 
   egress {
@@ -31,7 +31,7 @@ resource "aws_security_group" "web_sg" {
 # Security Group Database
 # ----------------------
 resource "aws_security_group" "db_sg" {
-  name   = "db-sg-${random_id.suffix.hex}"
+  name   = "sg_database-${random_id.suffix.hex}"
   vpc_id = aws_vpc.main_vpc.id
 
   ingress {

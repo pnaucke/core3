@@ -7,7 +7,7 @@ resource "aws_lb" "web_lb" {
   load_balancer_type = "application"
   subnets            = [aws_subnet.web1_subnet.id, aws_subnet.web2_subnet.id]
   security_groups    = [aws_security_group.web_sg.id]
-  tags = { Name = "web-lb" }
+  tags = { Name = "Loadbalancer" }
 }
 
 # ----------------------
