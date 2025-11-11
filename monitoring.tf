@@ -59,7 +59,7 @@ resource "aws_cloudwatch_dashboard" "web_dashboard" {
 
   dashboard_body = jsonencode({
     widgets = [
-      # CPU Usage grafiek
+      # CPU Usage grafiek (time series)
       {
         type = "metric"
         x = 0
@@ -80,13 +80,51 @@ resource "aws_cloudwatch_dashboard" "web_dashboard" {
         }
       },
 
-      # Uptime Webserver1 (Up/Down)
+      # CPU single value Webserver1
       {
         type = "metric"
         x = 0
         y = 7
         width = 12
-        height = 6
+        height = 4
+        properties = {
+          view = "singleValue"
+          title = "Webserver1 CPU"
+          region = "eu-central-1"
+          metrics = [
+            ["AWS/EC2", "CPUUtilization", "InstanceId", aws_instance.web1.id, { "stat": "Average", "label": "CPU %" }]
+          ]
+          period = 60
+          stat = "Average"
+        }
+      },
+
+      # CPU single value Webserver2
+      {
+        type = "metric"
+        x = 12
+        y = 7
+        width = 12
+        height = 4
+        properties = {
+          view = "singleValue"
+          title = "Webserver2 CPU"
+          region = "eu-central-1"
+          metrics = [
+            ["AWS/EC2", "CPUUtilization", "InstanceId", aws_instance.web2.id, { "stat": "Average", "label": "CPU %" }]
+          ]
+          period = 60
+          stat = "Average"
+        }
+      },
+
+      # Uptime Webserver1 (Up/Down)
+      {
+        type = "metric"
+        x = 0
+        y = 12
+        width = 12
+        height = 4
         properties = {
           view = "singleValue"
           title = "Webserver1 Uptime"
@@ -97,7 +135,6 @@ resource "aws_cloudwatch_dashboard" "web_dashboard" {
           ]
           period = 60
           stat = "Maximum"
-          annotations = {}
         }
       },
 
@@ -105,9 +142,9 @@ resource "aws_cloudwatch_dashboard" "web_dashboard" {
       {
         type = "metric"
         x = 12
-        y = 7
+        y = 12
         width = 12
-        height = 6
+        height = 4
         properties = {
           view = "singleValue"
           title = "Webserver2 Uptime"
@@ -118,7 +155,6 @@ resource "aws_cloudwatch_dashboard" "web_dashboard" {
           ]
           period = 60
           stat = "Maximum"
-          annotations = {}
         }
       }
     ]
