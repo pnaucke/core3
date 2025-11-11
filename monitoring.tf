@@ -1,57 +1,4 @@
 # ----------------------
-# CloudWatch Monitoring
-# ----------------------
-
-# CPU Alarm Web1
-resource "aws_cloudwatch_metric_alarm" "cpu_high_web1" {
-  alarm_name          = "cpu-high-web1"
-  comparison_operator = "GreaterThanThreshold"
-  evaluation_periods  = 1
-  metric_name         = "CPUUtilization"
-  namespace           = "AWS/EC2"
-  period              = 60
-  statistic           = "Average"
-  threshold           = 80
-
-  dimensions = {
-    InstanceId = aws_instance.web1.id
-  }
-}
-
-# CPU Alarm Web2
-resource "aws_cloudwatch_metric_alarm" "cpu_high_web2" {
-  alarm_name          = "cpu-high-web2"
-  comparison_operator = "GreaterThanThreshold"
-  evaluation_periods  = 1
-  metric_name         = "CPUUtilization"
-  namespace           = "AWS/EC2"
-  period              = 60
-  statistic           = "Average"
-  threshold           = 80
-
-  dimensions = {
-    InstanceId = aws_instance.web2.id
-  }
-}
-
-# Uptime Alarm via ALB Target Group
-resource "aws_cloudwatch_metric_alarm" "uptime_webserver" {
-  alarm_name          = "uptime-webserver"
-  comparison_operator = "GreaterThanThreshold"
-  evaluation_periods  = 1
-  metric_name         = "UnhealthyHostCount"
-  namespace           = "AWS/ApplicationELB"
-  period              = 60
-  statistic           = "Average"
-  threshold           = 0
-
-  dimensions = {
-    TargetGroup  = aws_lb_target_group.web_tg.arn_suffix
-    LoadBalancer = aws_lb.web_lb.arn_suffix
-  }
-}
-
-# ----------------------
 # CloudWatch Dashboard
 # ----------------------
 resource "aws_cloudwatch_dashboard" "web_dashboard" {
@@ -118,7 +65,7 @@ resource "aws_cloudwatch_dashboard" "web_dashboard" {
         }
       },
 
-      # Uptime Webserver1 (Up/Down)
+      # Uptime Webserver1 (Up / Down)
       {
         type = "metric"
         x = 0
@@ -130,15 +77,18 @@ resource "aws_cloudwatch_dashboard" "web_dashboard" {
           title = "Webserver1 Uptime"
           region = "eu-central-1"
           metrics = [
-            [ "AWS/ApplicationELB", "UnhealthyHostCount", "TargetGroup", aws_lb_target_group.web_tg.arn_suffix, "LoadBalancer", aws_lb.web_lb.arn_suffix, { "id": "m1" } ],
-            [ { "expression": "IF(m1==0,1,0)", "label": "UpFlag", "color": "#2ca02c" } ]
+            # ALB UnhealthyHostCount metric
+            ["AWS/ApplicationELB", "UnhealthyHostCount", "TargetGroup", aws_lb_target_group.web_tg.arn_suffix, "LoadBalancer", aws_lb.web_lb.arn_suffix, { "id": "m1" }],
+            # Metric math: 1 = Up, 0 = Down
+            [{ "expression": "IF(m1==0,1,0)", "label": "Up", "color": "#2ca02c" }]
           ]
           period = 60
           stat = "Maximum"
+          yAxis = { left = { min = 0, max = 1 } }
         }
       },
 
-      # Uptime Webserver2 (Up/Down)
+      # Uptime Webserver2 (Up / Down)
       {
         type = "metric"
         x = 12
@@ -150,11 +100,12 @@ resource "aws_cloudwatch_dashboard" "web_dashboard" {
           title = "Webserver2 Uptime"
           region = "eu-central-1"
           metrics = [
-            [ "AWS/ApplicationELB", "UnhealthyHostCount", "TargetGroup", aws_lb_target_group.web_tg.arn_suffix, "LoadBalancer", aws_lb.web_lb.arn_suffix, { "id": "m2" } ],
-            [ { "expression": "IF(m2==0,1,0)", "label": "UpFlag", "color": "#2ca02c" } ]
+            ["AWS/ApplicationELB", "UnhealthyHostCount", "TargetGroup", aws_lb_target_group.web_tg.arn_suffix, "LoadBalancer", aws_lb.web_lb.arn_suffix, { "id": "m2" }],
+            [{ "expression": "IF(m2==0,1,0)", "label": "Up", "color": "#2ca02c" }]
           ]
           period = 60
           stat = "Maximum"
+          yAxis = { left = { min = 0, max = 1 } }
         }
       }
     ]
