@@ -67,7 +67,7 @@ resource "aws_cloudwatch_dashboard" "web_dashboard" {
   dashboard_name = "web-dashboard"
   dashboard_body = jsonencode({
     widgets = [
-      # Paneel 1: CPU Usage Webservers
+      # Paneel 1: CPU Usage Webservers (tijdserie)
       {
         type  = "metric"
         x     = 0
@@ -88,11 +88,43 @@ resource "aws_cloudwatch_dashboard" "web_dashboard" {
           }
         }
       },
-      # Paneel 2: Uptime Webservers
+      # Paneel 2: Single-value CPU Webserver1
       {
         type  = "metric"
         x     = 0
         y     = 7
+        width = 6
+        height = 3
+        properties = {
+          metrics = [
+            ["AWS/EC2", "CPUUtilization", "InstanceId", aws_instance.web1.id, { "stat": "Average", "label": "Webserver1 CPU" }]
+          ]
+          view    = "singleValue"
+          region  = "eu-central-1"
+          title   = "Webserver1 CPU %"
+        }
+      },
+      # Paneel 3: Single-value CPU Webserver2
+      {
+        type  = "metric"
+        x     = 6
+        y     = 7
+        width = 6
+        height = 3
+        properties = {
+          metrics = [
+            ["AWS/EC2", "CPUUtilization", "InstanceId", aws_instance.web2.id, { "stat": "Average", "label": "Webserver2 CPU" }]
+          ]
+          view    = "singleValue"
+          region  = "eu-central-1"
+          title   = "Webserver2 CPU %"
+        }
+      },
+      # Paneel 4: Uptime Webservers
+      {
+        type  = "metric"
+        x     = 0
+        y     = 11
         width = 12
         height = 6
         properties = {
@@ -102,7 +134,7 @@ resource "aws_cloudwatch_dashboard" "web_dashboard" {
           ]
           view    = "singleValue"
           region  = "eu-central-1"
-          title   = "Uptime Webservers (0=Up,1=Down)"
+          title   = "Uptime Webservers (0=Up, 1=Down)"
         }
       }
     ]
