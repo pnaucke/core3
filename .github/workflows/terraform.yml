@@ -1,7 +1,7 @@
 name: Terraform Auto Deploy
 
 on:
-  push: {}  # Trigger bij elke push
+  push: {}
 
 jobs:
   terraform:
