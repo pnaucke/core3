@@ -69,6 +69,7 @@ resource "aws_ecs_service" "web_service" {
   task_definition = aws_ecs_task_definition.web_task.arn
   desired_count   = 1
   launch_type     = "FARGATE"
+  platform_version = "LATEST"
 
   network_configuration {
     subnets         = [aws_subnet.web_subnet.id]
@@ -82,7 +83,6 @@ resource "aws_ecs_service" "web_service" {
   depends_on = [aws_iam_role_policy_attachment.ecs_task_execution_amazon_ecs]
 }
 
-# Output: cluster name en service name
 output "ecs_cluster_name" {
   value = aws_ecs_cluster.web_cluster.name
 }
