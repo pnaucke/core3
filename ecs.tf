@@ -1,11 +1,12 @@
-# ECS Cluster
-resource "aws_ecs_cluster" "web_cluster" {
-  name = "web-cluster"
+# CloudWatch Log Group voor container logs
+resource "aws_cloudwatch_log_group" "web" {
+  name              = "/ecs/webserver"
+  retention_in_days = 7
 }
 
-# IAM Role voor Fargate tasks
-resource "aws_iam_role" "ecs_task_execution_role" {
-  name = "ecsTaskExecutionRole"
+# IAM role voor ECS Task Execution
+resource "aws_iam_role" "ecs_task_execution" {
+  name = "ecsTaskExecutionRole-web"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
@@ -19,37 +20,51 @@ resource "aws_iam_role" "ecs_task_execution_role" {
   })
 }
 
-resource "aws_iam_role_policy_attachment" "ecs_task_execution_policy" {
-  role       = aws_iam_role.ecs_task_execution_role.name
+resource "aws_iam_role_policy_attachment" "ecs_task_execution_amazon_ecs" {
+  role       = aws_iam_role.ecs_task_execution.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
-# ECS Task Definition
+# ECS cluster
+resource "aws_ecs_cluster" "web_cluster" {
+  name = "web-cluster"
+}
+
+# ECS task definition (Fargate) met nginx
 resource "aws_ecs_task_definition" "web_task" {
-  family                   = "web-task"
+  family                   = "webserver"
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
   cpu                      = "512"
   memory                   = "1024"
-  execution_role_arn       = aws_iam_role.ecs_task_execution_role.arn
+  execution_role_arn       = aws_iam_role.ecs_task_execution.arn
 
   container_definitions = jsonencode([
     {
-      name      = "web"
-      image     = "nginx:latest"
+      name      = "webserver"
+      image     = "nginx:stable"
       essential = true
       portMappings = [
         {
           containerPort = 80
+          protocol      = "tcp"
         }
       ]
+      logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          "awslogs-group"         = aws_cloudwatch_log_group.web.name
+          "awslogs-region"        = "eu-central-1"
+          "awslogs-stream-prefix" = "nginx"
+        }
+      }
     }
   ])
 }
 
-# ECS Service
+# ECS service (Fargate) zonder Load Balancer; gebruikt jouw subnet en security group
 resource "aws_ecs_service" "web_service" {
-  name            = "web-service"
+  name            = "webserver"
   cluster         = aws_ecs_cluster.web_cluster.id
   task_definition = aws_ecs_task_definition.web_task.arn
   desired_count   = 1
@@ -60,4 +75,29 @@ resource "aws_ecs_service" "web_service" {
     security_groups = [aws_security_group.web_sg.id]
     assign_public_ip = true
   }
+
+  deployment_minimum_healthy_percent = 50
+  deployment_maximum_percent         = 200
+
+  depends_on = [aws_iam_role_policy_attachment.ecs_task_execution_amazon_ecs]
+}
+
+# Optionele helper: data block en output om de public IP van de eerste taak ENI te vinden.
+# Werkt alleen nadat de taak draait; kan nuttig zijn voor debugging/manual lookup.
+
+data "aws_ecs_tasks" "web_tasks" {
+  cluster = aws_ecs_cluster.web_cluster.id
+  task_arns = []
+  depends_on = [aws_ecs_service.web_service]
+  # Note: aws_ecs_tasks (plural) may not be available in all provider versions.
+  # If unavailable, haal de taakinformatie via AWS CLI of console.
+}
+
+# Output: cluster name en service name (handig om snel te vinden)
+output "ecs_cluster_name" {
+  value = aws_ecs_cluster.web_cluster.name
+}
+
+output "ecs_service_name" {
+  value = aws_ecs_service.web_service.name
 }
