@@ -9,7 +9,7 @@ resource "aws_vpc" "main_vpc" {
 }
 
 # ----------------------
-# Public subnet voor ECS Fargate / Webserver
+# Public subnet voor webserver
 # ----------------------
 resource "aws_subnet" "web_subnet" {
   vpc_id                  = aws_vpc.main_vpc.id
@@ -20,12 +20,12 @@ resource "aws_subnet" "web_subnet" {
 }
 
 # ----------------------
-# Database private subnets
+# Private subnet voor database
 # ----------------------
 resource "aws_subnet" "db_subnet1" {
   vpc_id                  = aws_vpc.main_vpc.id
   cidr_block              = "172.31.2.0/24"
-  availability_zone       = "eu-central-1a"
+  availability_zone       = "eu-central-1b"
   map_public_ip_on_launch = false
   tags = { Name = "subnet_db_private1" }
 }
@@ -33,7 +33,7 @@ resource "aws_subnet" "db_subnet1" {
 resource "aws_subnet" "db_subnet2" {
   vpc_id                  = aws_vpc.main_vpc.id
   cidr_block              = "172.31.3.0/24"
-  availability_zone       = "eu-central-1b"
+  availability_zone       = "eu-central-1c"
   map_public_ip_on_launch = false
   tags = { Name = "subnet_db_private2" }
 }
@@ -51,10 +51,12 @@ resource "aws_internet_gateway" "main_igw" {
 # ----------------------
 resource "aws_route_table" "public_rt" {
   vpc_id = aws_vpc.main_vpc.id
+
   route {
     cidr_block = "0.0.0.0/0"
     gateway_id = aws_internet_gateway.main_igw.id
   }
+
   tags = { Name = "public-rt" }
 }
 
