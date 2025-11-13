@@ -82,18 +82,7 @@ resource "aws_ecs_service" "web_service" {
   depends_on = [aws_iam_role_policy_attachment.ecs_task_execution_amazon_ecs]
 }
 
-# Optionele helper: data block en output om de public IP van de eerste taak ENI te vinden.
-# Werkt alleen nadat de taak draait; kan nuttig zijn voor debugging/manual lookup.
-
-data "aws_ecs_tasks" "web_tasks" {
-  cluster = aws_ecs_cluster.web_cluster.id
-  task_arns = []
-  depends_on = [aws_ecs_service.web_service]
-  # Note: aws_ecs_tasks (plural) may not be available in all provider versions.
-  # If unavailable, haal de taakinformatie via AWS CLI of console.
-}
-
-# Output: cluster name en service name (handig om snel te vinden)
+# Output: cluster name en service name
 output "ecs_cluster_name" {
   value = aws_ecs_cluster.web_cluster.name
 }
