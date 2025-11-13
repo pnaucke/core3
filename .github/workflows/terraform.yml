@@ -7,7 +7,6 @@ jobs:
   terraform:
     runs-on: ubuntu-latest
     env:
-      AWS_REGION: ${{ secrets.AWS_REGION }}
       TF_VAR_DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
 
     steps:
@@ -24,7 +23,6 @@ jobs:
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: ${{ secrets.AWS_REGION }}
 
       - name: Terraform Init
         run: terraform init -input=false -upgrade
