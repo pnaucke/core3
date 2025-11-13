@@ -5,14 +5,15 @@ resource "aws_db_subnet_group" "db_subnet_group" {
 }
 
 resource "aws_db_instance" "db" {
-  identifier              = "hrdb-${random_id.suffix.hex}"
+  identifier              = "mydb-${random_id.suffix.hex}"
   allocated_storage       = 20
-  engine                  = "postgres"
-  engine_version          = "15"
+  engine                  = "mysql"
+  engine_version          = "8.0"
   instance_class          = "db.t3.micro"
-  db_name                 = "hrdb"
+  db_name                 = "myappdb"
   username                = "admin"
   password                = var.db_password
+  parameter_group_name    = "default.mysql8.0"
   skip_final_snapshot     = true
   vpc_security_group_ids  = [aws_security_group.db_sg.id]
   db_subnet_group_name    = aws_db_subnet_group.db_subnet_group.name
