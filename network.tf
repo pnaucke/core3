@@ -8,6 +8,27 @@ resource "aws_vpc" "main" {
   }
 }
 
+# Internet Gateway
+resource "aws_internet_gateway" "main_igw" {
+  vpc_id = aws_vpc.main.id
+  tags = {
+    Name = "VPC-HR-IGW"
+  }
+}
+
+# Route Table voor public subnets
+resource "aws_route_table" "public" {
+  vpc_id = aws_vpc.main.id
+  tags = {
+    Name = "Public-RT"
+  }
+
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = aws_internet_gateway.main_igw.id
+  }
+}
+
 # Private subnets
 resource "aws_subnet" "web_subnet" {
   vpc_id            = aws_vpc.main.id
@@ -51,6 +72,12 @@ resource "aws_subnet" "lb_subnet1" {
   }
 }
 
+# Route Table associatie voor lb_subnet1
+resource "aws_route_table_association" "lb_subnet1_assoc" {
+  subnet_id      = aws_subnet.lb_subnet1.id
+  route_table_id = aws_route_table.public.id
+}
+
 resource "aws_subnet" "lb_subnet2" {
   vpc_id            = aws_vpc.main.id
   cidr_block        = "172.31.5.0/24"
@@ -60,4 +87,10 @@ resource "aws_subnet" "lb_subnet2" {
   tags = {
     Name = "subnet_lb2"
   }
+}
+
+# Route Table associatie voor lb_subnet2
+resource "aws_route_table_association" "lb_subnet2_assoc" {
+  subnet_id      = aws_subnet.lb_subnet2.id
+  route_table_id = aws_route_table.public.id
 }
