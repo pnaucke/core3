@@ -1,7 +1,9 @@
+# ECS cluster
 resource "aws_ecs_cluster" "web_cluster" {
   name = "web-cluster"
 }
 
+# ECS task definition met Nginx
 resource "aws_ecs_task_definition" "web_task" {
   family                   = "webserver"
   network_mode             = "awsvpc"
@@ -12,7 +14,7 @@ resource "aws_ecs_task_definition" "web_task" {
   container_definitions = jsonencode([
     {
       name      = "webserver"
-      image     = "nginx:stable"
+      image     = "nginx:latest"
       essential = true
       portMappings = [
         {
@@ -24,6 +26,7 @@ resource "aws_ecs_task_definition" "web_task" {
   ])
 }
 
+# ECS service gekoppeld aan de Load Balancer
 resource "aws_ecs_service" "web_service" {
   name            = "webserver"
   cluster         = aws_ecs_cluster.web_cluster.id
