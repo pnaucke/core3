@@ -26,6 +26,37 @@ resource "aws_ecs_task_definition" "web_task" {
   ])
 }
 
+# Target group voor Fargate (type ip voor awsvpc)
+resource "aws_lb_target_group" "web_tg" {
+  name        = "web-tg"
+  port        = 80
+  protocol    = "HTTP"
+  vpc_id      = aws_vpc.main.id
+  target_type = "ip"
+
+  health_check {
+    protocol = "HTTP"
+    path     = "/"
+    interval = 15
+  }
+
+  tags = {
+    Name = "web_tg"
+  }
+}
+
+# Listener voor Load Balancer
+resource "aws_lb_listener" "web_listener" {
+  load_balancer_arn = aws_lb.web_lb.arn
+  port              = 80
+  protocol          = "HTTP"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_lb_target_group.web_tg.arn
+  }
+}
+
 # ECS service gekoppeld aan Load Balancer
 resource "aws_ecs_service" "web_service" {
   name            = "webserver"
@@ -36,7 +67,7 @@ resource "aws_ecs_service" "web_service" {
   platform_version = "LATEST"
 
   network_configuration {
-    subnets         = [aws_subnet.web_subnet.id]
+    subnets         = [aws_subnet.web_subnet.id]  # private subnet
     security_groups = [aws_security_group.web_sg.id]
     assign_public_ip = false
   }
