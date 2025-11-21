@@ -1,5 +1,5 @@
 resource "aws_lb" "web_lb" {
-  name               = "weblb"
+  name               = "web-lb"
   internal           = false
   load_balancer_type = "application"
   security_groups    = [aws_security_group.lb_sg.id]
@@ -11,12 +11,12 @@ resource "aws_lb" "web_lb" {
   enable_deletion_protection = false
 
   tags = {
-    Name = "weblb"
+    Name = "web_lb"
   }
 }
 
 resource "aws_lb_target_group" "web_tg" {
-  name        = "webtg"
+  name        = "web-tg"
   port        = 80
   protocol    = "HTTP"
   vpc_id      = aws_vpc.main.id
@@ -29,7 +29,7 @@ resource "aws_lb_target_group" "web_tg" {
   }
 
   tags = {
-    Name = "webtg"
+    Name = "web_tg"
   }
 }
 
