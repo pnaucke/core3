@@ -1,7 +1,9 @@
+# ECS Cluster
 resource "aws_ecs_cluster" "webcluster" {
   name = "webcluster"
 }
 
+# IAM role voor ECS tasks
 resource "aws_iam_role" "ecs_exec_role" {
   name = "ecs_exec_role"
 
@@ -19,11 +21,13 @@ resource "aws_iam_role" "ecs_exec_role" {
   })
 }
 
+# IAM policy attachment
 resource "aws_iam_role_policy_attachment" "ecs_exec_policy" {
   role       = aws_iam_role.ecs_exec_role.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
+# ECS Task Definition
 resource "aws_ecs_task_definition" "web_task" {
   family                   = "web_task"
   network_mode             = "awsvpc"
@@ -35,7 +39,7 @@ resource "aws_ecs_task_definition" "web_task" {
   container_definitions = jsonencode([
     {
       name  = "web"
-      image = "nginx"
+      image = "nginx:latest"
       essential = true
       portMappings = [
         {
@@ -48,6 +52,7 @@ resource "aws_ecs_task_definition" "web_task" {
   ])
 }
 
+# ECS Service
 resource "aws_ecs_service" "webservice" {
   name            = "webserver"
   cluster         = aws_ecs_cluster.webcluster.id
@@ -56,8 +61,8 @@ resource "aws_ecs_service" "webservice" {
   desired_count   = 1
 
   network_configuration {
-    subnets          = [aws_subnet.web_subnet.id]
-    assign_public_ip = false
+    subnets          = [aws_subnet.web_subnet.id]  # private subnet
+    assign_public_ip = false                        # geen public IP, NAT gebruikt
     security_groups  = [aws_security_group.web_sg.id]
   }
 
@@ -68,6 +73,7 @@ resource "aws_ecs_service" "webservice" {
   }
 
   depends_on = [
-    aws_lb_listener.web_listener
+    aws_lb_listener.web_listener,
+    aws_nat_gateway.nat   # zorg dat NAT gateway klaar is voordat ECS start
   ]
 }
