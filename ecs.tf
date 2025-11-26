@@ -1,24 +1,46 @@
-# ECS cluster
-resource "aws_ecs_cluster" "web_cluster" {
-  name = "web-cluster"
+resource "aws_ecs_cluster" "webcluster" {
+  name = "webcluster"
 }
 
-# ECS task definition met Nginx
-resource "aws_ecs_task_definition" "web_task" {
-  family                   = "webserver"
+resource "aws_iam_role" "ecs_exec_role" {
+  name = "ecs_exec_role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012_10_17"
+    Statement = [
+      {
+        Action = "sts_AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "ecs_tasks.amazonaws.com"
+        }
+      }
+    ]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "ecs_exec_policy" {
+  role       = aws_iam_role.ecs_exec_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service_role_AmazonECSTaskExecutionRolePolicy"
+}
+
+resource "aws_ecs_task_definition" "webtask" {
+  family                   = "webtask"
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
   cpu                      = "512"
   memory                   = "1024"
+  execution_role_arn       = aws_iam_role.ecs_exec_role.arn
 
   container_definitions = jsonencode([
     {
-      name      = "webserver"
-      image     = "nginx:latest"
+      name  = "web"
+      image = "nginx"
       essential = true
       portMappings = [
         {
           containerPort = 80
+          hostPort      = 80
           protocol      = "tcp"
         }
       ]
@@ -26,26 +48,16 @@ resource "aws_ecs_task_definition" "web_task" {
   ])
 }
 
-# ECS service gekoppeld aan de Load Balancer
-resource "aws_ecs_service" "web_service" {
+resource "aws_ecs_service" "webservice" {
   name            = "webserver"
-  cluster         = aws_ecs_cluster.web_cluster.id
-  task_definition = aws_ecs_task_definition.web_task.arn
-  desired_count   = 1
+  cluster         = aws_ecs_cluster.webcluster.id
+  task_definition = aws_ecs_task_definition.webtask.arn
   launch_type     = "FARGATE"
-  platform_version = "LATEST"
+  desired_count   = 1
 
   network_configuration {
-    subnets         = [aws_subnet.web_subnet.id]  # private subnet
+    subnets         = [aws_subnet.web_subnet.id]
+    assign_public_ip = true
     security_groups = [aws_security_group.web_sg.id]
-    assign_public_ip = false
   }
-
-  load_balancer {
-    target_group_arn = aws_lb_target_group.web_tg.arn
-    container_name   = "webserver"
-    container_port   = 80
-  }
-
-  depends_on = [aws_lb_listener.web_listener]
 }
