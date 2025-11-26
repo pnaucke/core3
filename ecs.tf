@@ -6,13 +6,13 @@ resource "aws_iam_role" "ecs_exec_role" {
   name = "ecs_exec_role"
 
   assume_role_policy = jsonencode({
-    Version = "2012_10_17"
+    Version = "2012-10-17"
     Statement = [
       {
-        Action = "sts_AssumeRole"
+        Action = "sts:AssumeRole"
         Effect = "Allow"
         Principal = {
-          Service = "ecs_tasks.amazonaws.com"
+          Service = "ecs-tasks.amazonaws.com"
         }
       }
     ]
@@ -21,11 +21,11 @@ resource "aws_iam_role" "ecs_exec_role" {
 
 resource "aws_iam_role_policy_attachment" "ecs_exec_policy" {
   role       = aws_iam_role.ecs_exec_role.name
-  policy_arn = "arn:aws:iam::aws:policy/service_role_AmazonECSTaskExecutionRolePolicy"
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
-resource "aws_ecs_task_definition" "webtask" {
-  family                   = "webtask"
+resource "aws_ecs_task_definition" "web_task" {
+  family                   = "web_task"
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
   cpu                      = "512"
@@ -51,7 +51,7 @@ resource "aws_ecs_task_definition" "webtask" {
 resource "aws_ecs_service" "webservice" {
   name            = "webserver"
   cluster         = aws_ecs_cluster.webcluster.id
-  task_definition = aws_ecs_task_definition.webtask.arn
+  task_definition = aws_ecs_task_definition.web_task.arn
   launch_type     = "FARGATE"
   desired_count   = 1
 
