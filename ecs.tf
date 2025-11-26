@@ -28,8 +28,8 @@ resource "aws_ecs_task_definition" "web_task" {
   family                   = "web_task"
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
-  cpu                      = "512"
-  memory                   = "1024"
+  cpu                      = "256"
+  memory                   = "512"
   execution_role_arn       = aws_iam_role.ecs_exec_role.arn
 
   container_definitions = jsonencode([
@@ -56,8 +56,18 @@ resource "aws_ecs_service" "webservice" {
   desired_count   = 1
 
   network_configuration {
-    subnets         = [aws_subnet.web_subnet.id]
-    assign_public_ip = true
-    security_groups = [aws_security_group.web_sg.id]
+    subnets          = [aws_subnet.web_subnet.id]
+    assign_public_ip = false
+    security_groups  = [aws_security_group.web_sg.id]
   }
+
+  load_balancer {
+    target_group_arn = aws_lb_target_group.web_tg.arn
+    container_name   = "web"
+    container_port   = 80
+  }
+
+  depends_on = [
+    aws_lb_listener.web_listener
+  ]
 }
