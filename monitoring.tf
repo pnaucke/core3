@@ -46,6 +46,40 @@ resource "aws_cloudwatch_dashboard" "ecs_cpu_dashboard" {
           region  = "eu-central-1"
           stat    = "Average"
           period  = 60
+          yAxis   = {
+            left = {
+              min = 0
+              max = 100
+              label = "CPU %"
+            }
+          }
+          setPeriodToTimeRange = false
+          liveData = true
+        }
+      },
+      {
+        type = "metric"
+        x = 0
+        y = 7
+        width = 12
+        height = 3
+        properties = {
+          metrics = [
+            [
+              "AWS/ECS",
+              "CPUUtilization",
+              "ClusterName",
+              aws_ecs_cluster.webcluster.name,
+              "ServiceName",
+              aws_ecs_service.webservice.name,
+              { "stat": "Average" }
+            ]
+          ]
+          view = "singleValue"
+          region = "eu-central-1"
+          period = 60
+          liveData = true
+          title = "Huidige CPU %"
         }
       }
     ]
