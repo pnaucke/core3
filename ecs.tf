@@ -8,11 +8,11 @@ resource "aws_iam_role" "ecs_exec_role" {
   name = "ecs_exec_role"
 
   assume_role_policy = jsonencode({
-    Version = "2012-10-17"
+    Version = "2012-10-17",
     Statement = [
       {
-        Action = "sts:AssumeRole"
-        Effect = "Allow"
+        Action = "sts:AssumeRole",
+        Effect = "Allow",
         Principal = {
           Service = "ecs-tasks.amazonaws.com"
         }
@@ -31,10 +31,10 @@ resource "aws_iam_role_policy_attachment" "ecs_exec_policy" {
 resource "null_resource" "push_to_ecr" {
   provisioner "local-exec" {
     command = <<EOT
-      aws ecr get-login-password --region eu-central-1 | docker login --username AWS --password-stdin ${aws_ecr_repository.website.repository_url}
-      docker build -t ${aws_ecr_repository.website.repository_url}:latest ${path.module}/website
-      docker push ${aws_ecr_repository.website.repository_url}:latest
-    EOT
+aws ecr get-login-password --region eu-central-1 | docker login --username AWS --password-stdin ${aws_ecr_repository.website.repository_url}
+docker build -t ${aws_ecr_repository.website.repository_url}:latest ${path.module}/website
+docker push ${aws_ecr_repository.website.repository_url}:latest
+EOT
   }
 }
 
@@ -51,13 +51,13 @@ resource "aws_ecs_task_definition" "web_task" {
 
   container_definitions = jsonencode([
     {
-      name      = "web"
-      image     = "${aws_ecr_repository.website.repository_url}:latest"
-      essential = true
+      name      = "web",
+      image     = "${aws_ecr_repository.website.repository_url}:latest",
+      essential = true,
       portMappings = [
         {
-          containerPort = 80
-          hostPort      = 80
+          containerPort = 80,
+          hostPort      = 80,
           protocol      = "tcp"
         }
       ]
