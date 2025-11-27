@@ -27,18 +27,13 @@ resource "aws_iam_role_policy_attachment" "ecs_exec_policy" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
-# Docker image build en push naar ECR (inline Dockerfile)
+# Docker image build en push naar ECR
 resource "docker_image" "website" {
   name = "${aws_ecr_repository.website.repository_url}:latest"
 
   build {
-    context = "${path.module}/website"
-
-    dockerfile = <<EOF
-FROM php:8.2-apache
-COPY . /var/www/html/
-EXPOSE 80
-EOF
+    context    = "${path.module}/website"
+    dockerfile = "${path.module}/website/Dockerfile"
   }
 
   keep_locally = false
