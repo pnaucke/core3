@@ -1,3 +1,34 @@
+provider "aws" {
+  region = var.aws_region
+}
+
+provider "docker" {}
+
+# ECR repository voor website
+resource "aws_ecr_repository" "website" {
+  name = "my-website"
+}
+
+# ECR authorization token
+data "aws_ecr_authorization_token" "token" {}
+
+provider "docker" {
+  registry_auth {
+    address  = aws_ecr_repository.website.repository_url
+    username = data.aws_ecr_authorization_token.token.user_name
+    password = data.aws_ecr_authorization_token.token.password
+  }
+}
+
+# Docker image build en push
+resource "docker_image" "website" {
+  name = "${aws_ecr_repository.website.repository_url}:latest"
+  build {
+    context    = "${path.module}/website"
+    dockerfile = "${path.module}/website/Dockerfile"
+  }
+}
+
 # ECS Cluster
 resource "aws_ecs_cluster" "webcluster" {
   name = "webcluster"
@@ -27,7 +58,7 @@ resource "aws_iam_role_policy_attachment" "ecs_exec_policy" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
-# ECS Task Definition
+# ECS Task Definition met jouw PHP website image
 resource "aws_ecs_task_definition" "web_task" {
   family                   = "web_task"
   network_mode             = "awsvpc"
@@ -38,8 +69,8 @@ resource "aws_ecs_task_definition" "web_task" {
 
   container_definitions = jsonencode([
     {
-      name  = "web"
-      image = "nginx:latest"
+      name      = "web"
+      image     = docker_image.website.name
       essential = true
       portMappings = [
         {
@@ -61,8 +92,8 @@ resource "aws_ecs_service" "webservice" {
   desired_count   = 1
 
   network_configuration {
-    subnets          = [aws_subnet.web_subnet.id]  # private subnet
-    assign_public_ip = false                        # geen public IP, NAT gebruikt
+    subnets          = [aws_subnet.web_subnet.id]
+    assign_public_ip = false
     security_groups  = [aws_security_group.web_sg.id]
   }
 
@@ -74,6 +105,6 @@ resource "aws_ecs_service" "webservice" {
 
   depends_on = [
     aws_lb_listener.web_listener,
-    aws_nat_gateway.nat   # zorg dat NAT gateway klaar is voordat ECS start
+    aws_nat_gateway.nat
   ]
 }
