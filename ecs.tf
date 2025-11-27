@@ -1,3 +1,30 @@
+# Docker provider
+provider "docker" {}
+
+# ECR repository voor website
+resource "aws_ecr_repository" "website" {
+  name = "my-website"
+}
+
+# ECR authorization token
+data "aws_ecr_authorization_token" "token" {}
+
+# Docker image build en push
+resource "docker_image" "website" {
+  name = "${aws_ecr_repository.website.repository_url}:latest"
+  build {
+    context    = "${path.module}/website"
+    dockerfile = "${path.module}/website/Dockerfile"
+  }
+
+  # Registry login
+  registry_auth {
+    address  = aws_ecr_repository.website.repository_url
+    username = data.aws_ecr_authorization_token.token.user_name
+    password = data.aws_ecr_authorization_token.token.password
+  }
+}
+
 # ECS Cluster
 resource "aws_ecs_cluster" "webcluster" {
   name = "webcluster"
@@ -27,7 +54,12 @@ resource "aws_iam_role_policy_attachment" "ecs_exec_policy" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
-# ECS Task Definition met jouw PHP website image
+# Random suffix voor unieke ECS service naam
+resource "random_id" "suffix" {
+  byte_length = 2
+}
+
+# ECS Task Definition met PHP website image
 resource "aws_ecs_task_definition" "web_task" {
   family                   = "web_task"
   network_mode             = "awsvpc"
