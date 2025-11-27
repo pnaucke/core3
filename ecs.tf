@@ -20,7 +20,7 @@ resource "docker_image" "website" {
     dockerfile = "${path.module}/website/Dockerfile"
   }
 
-  # authenticatie
+  # authenticatie met ECR
   registry_auth {
     address  = aws_ecr_repository.website.repository_url
     username = data.aws_ecr_authorization_token.token.user_name
@@ -57,7 +57,7 @@ resource "aws_iam_role_policy_attachment" "ecs_exec_policy" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
-# ECS Task Definition met jouw PHP website image
+# ECS Task Definition met PHP website image
 resource "aws_ecs_task_definition" "web_task" {
   family                   = "web_task"
   network_mode             = "awsvpc"
@@ -68,8 +68,8 @@ resource "aws_ecs_task_definition" "web_task" {
 
   container_definitions = jsonencode([
     {
-      name      = "web"
-      image     = docker_image.website.name
+      name  = "web"
+      image = docker_image.website.name
       essential = true
       portMappings = [
         {
