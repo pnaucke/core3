@@ -1,6 +1,9 @@
 # Gebruik PHP 8.2 met Apache
 FROM php:8.2-apache
 
+# Verwijder eventuele oude bestanden uit de webroot
+RUN rm -rf /var/www/html/*
+
 # Kopieer alle bestanden uit de website folder naar de web root
 COPY . /var/www/html/
 
