@@ -1,3 +1,8 @@
+variable "aws_region" {
+  type    = string
+  default = "eu-west-1"
+}
+
 # CloudWatch CPU alarm
 resource "aws_cloudwatch_metric_alarm" "cpu_high_web" {
   alarm_name          = "cpu_high_web"
@@ -24,12 +29,12 @@ resource "aws_cloudwatch_dashboard" "ecs_cpu_dashboard" {
   dashboard_body = jsonencode({
     widgets = [
       {
-        type = "metric"
-        width = 12
+        type   = "metric"
+        width  = 12
         height = 6
         properties = {
-          region = var.aws_region
-          title = "ECS CPU gebruik"
+          region  = var.aws_region
+          title   = "ECS CPU gebruik"
           metrics = [
             [
               "AWS/ECS",
@@ -40,6 +45,10 @@ resource "aws_cloudwatch_dashboard" "ecs_cpu_dashboard" {
               aws_ecs_service.webservice.name
             ]
           ]
+          view    = "timeSeries"
+          stacked = false
+          period  = 60
+          stat    = "Average"
           annotations = {
             alarms = [
               aws_cloudwatch_metric_alarm.cpu_high_web.arn
