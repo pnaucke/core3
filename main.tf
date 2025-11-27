@@ -27,3 +27,9 @@ provider "aws" {
 resource "random_id" "suffix" {
   byte_length = 2
 }
+
+provider "docker" {}
+
+resource "aws_ecr_repository" "website" {
+  name = "my-website"
+}

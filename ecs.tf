@@ -1,33 +1,3 @@
-provider "aws" {
-  region = var.aws_region
-}
-
-provider "docker" {}
-
-# ECR repository voor website
-resource "aws_ecr_repository" "website" {
-  name = "my-website"
-}
-
-# ECR authorization token
-data "aws_ecr_authorization_token" "token" {}
-
-# Docker image build en push
-resource "docker_image" "website" {
-  name = "${aws_ecr_repository.website.repository_url}:latest"
-  build {
-    context    = "${path.module}/website"
-    dockerfile = "${path.module}/website/Dockerfile"
-  }
-
-  # authenticatie met ECR
-  registry_auth {
-    address  = aws_ecr_repository.website.repository_url
-    username = data.aws_ecr_authorization_token.token.user_name
-    password = data.aws_ecr_authorization_token.token.password
-  }
-}
-
 # ECS Cluster
 resource "aws_ecs_cluster" "webcluster" {
   name = "webcluster"
@@ -69,7 +39,7 @@ resource "aws_ecs_task_definition" "web_task" {
   container_definitions = jsonencode([
     {
       name  = "web"
-      image = docker_image.website.name
+      image = "${aws_ecr_repository.website.repository_url}:latest"
       essential = true
       portMappings = [
         {
