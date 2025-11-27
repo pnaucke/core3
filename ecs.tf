@@ -12,20 +12,19 @@ resource "aws_ecr_repository" "website" {
 # ECR authorization token
 data "aws_ecr_authorization_token" "token" {}
 
-provider "docker" {
-  registry_auth {
-    address  = aws_ecr_repository.website.repository_url
-    username = data.aws_ecr_authorization_token.token.user_name
-    password = data.aws_ecr_authorization_token.token.password
-  }
-}
-
 # Docker image build en push
 resource "docker_image" "website" {
   name = "${aws_ecr_repository.website.repository_url}:latest"
   build {
     context    = "${path.module}/website"
     dockerfile = "${path.module}/website/Dockerfile"
+  }
+
+  # authenticatie
+  registry_auth {
+    address  = aws_ecr_repository.website.repository_url
+    username = data.aws_ecr_authorization_token.token.user_name
+    password = data.aws_ecr_authorization_token.token.password
   }
 }
 
