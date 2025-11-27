@@ -3,17 +3,21 @@ resource "aws_ecs_cluster" "webcluster" {
   name = "webcluster"
 }
 
-# IAM Role voor ECS tasks
+# IAM role voor ECS tasks
 resource "aws_iam_role" "ecs_exec_role" {
   name = "ecs_exec_role"
 
   assume_role_policy = jsonencode({
     Version = "2012-10-17"
-    Statement = [{
-      Action = "sts:AssumeRole"
-      Effect = "Allow"
-      Principal = { Service = "ecs-tasks.amazonaws.com" }
-    }]
+    Statement = [
+      {
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
+        Principal = {
+          Service = "ecs-tasks.amazonaws.com"
+        }
+      }
+    ]
   })
 }
 
@@ -21,13 +25,6 @@ resource "aws_iam_role" "ecs_exec_role" {
 resource "aws_iam_role_policy_attachment" "ecs_exec_policy" {
   role       = aws_iam_role.ecs_exec_role.name
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
-}
-
-# Check of Dockerfile bestaat
-resource "null_resource" "check_dockerfile" {
-  provisioner "local-exec" {
-    command = "test -f ${path.module}/website/Dockerfile && echo 'Dockerfile found' || (echo 'Dockerfile missing' && exit 1)"
-  }
 }
 
 # Docker image build en push naar ECR
@@ -40,7 +37,6 @@ resource "docker_image" "website" {
   }
 
   keep_locally = false
-  depends_on   = [null_resource.check_dockerfile]
 }
 
 # ECS Task Definition met PHP website image
@@ -52,16 +48,20 @@ resource "aws_ecs_task_definition" "web_task" {
   memory                   = "1024"
   execution_role_arn       = aws_iam_role.ecs_exec_role.arn
 
-  container_definitions = jsonencode([{
-    name      = "web"
-    image     = docker_image.website.name
-    essential = true
-    portMappings = [{
-      containerPort = 80
-      hostPort      = 80
-      protocol      = "tcp"
-    }]
-  }])
+  container_definitions = jsonencode([
+    {
+      name      = "web"
+      image     = docker_image.website.name
+      essential = true
+      portMappings = [
+        {
+          containerPort = 80
+          hostPort      = 80
+          protocol      = "tcp"
+        }
+      ]
+    }
+  ])
 }
 
 # ECS Service
