@@ -1,7 +1,7 @@
 <?php
 session_start();
 if (!isset($_SESSION['loggedin'])) {
-    header("Location: lndex.php");
+    header("Location: index.php");
     exit;
 }
 
@@ -12,10 +12,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $status = $_POST['status'];
     $role = $_POST['role'];
 
-    $conn = new PDO("mysql:host=localhost;dbname=BookWorld", "root", "");
-    $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-
     try {
+        $conn = new PDO("mysql:host=localhost;dbname=BookWorld", "root", "");
+        $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
         $stmt = $conn->prepare("INSERT INTO users (name, department, status, role) VALUES (?, ?, ?, ?)");
         $stmt->execute([$name, $department, $status, $role]);
         $message = "User aangemaakt";
@@ -26,6 +26,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 ?>
 
 <h1>Add User</h1>
+<nav>
+    <a href="home.php">Home</a> |
+    <a href="add.php">Add User</a> |
+    <a href="delete.php">Delete User</a> |
+    <a href="users.php">Users</a> |
+    <a href="logout.php">Logout</a>
+</nav>
+
 <form method="POST">
     <label>Name</label><br>
     <input type="text" name="name" required><br>
@@ -38,4 +46,3 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     <input type="submit" value="Send">
 </form>
 <p><?php echo $message; ?></p>
-<a href="home.php">Terug</a>

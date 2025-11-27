@@ -1,18 +1,31 @@
 <?php
 session_start();
 if (!isset($_SESSION['loggedin'])) {
-    header("Location: lndex.php");
+    header("Location: index.php");
     exit;
 }
 
-$conn = new PDO("mysql:host=localhost;dbname=BookWorld", "root", "");
-$conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-$stmt = $conn->query("SELECT * FROM users");
-$users = $stmt->fetchAll(PDO::FETCH_ASSOC);
+try {
+    $conn = new PDO("mysql:host=localhost;dbname=BookWorld", "root", "");
+    $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+    $stmt = $conn->query("SELECT * FROM users");
+    $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (Exception $e) {
+    echo "Foutmelding: " . $e->getMessage();
+}
 ?>
 
 <h1>Users</h1>
-<table border="1">
+<nav>
+    <a href="home.php">Home</a> |
+    <a href="add.php">Add User</a> |
+    <a href="delete.php">Delete User</a> |
+    <a href="users.php">Users</a> |
+    <a href="logout.php">Logout</a>
+</nav>
+
+<table border="1" cellpadding="5">
     <tr>
         <th>ID</th>
         <th>Name</th>
@@ -30,4 +43,3 @@ $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
     </tr>
     <?php endforeach; ?>
 </table>
-<a href="home.php">Terug</a>
