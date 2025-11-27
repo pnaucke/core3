@@ -19,9 +19,10 @@ resource "aws_cloudwatch_metric_alarm" "cpu_high_web" {
 
 # CloudWatch dashboard
 resource "aws_cloudwatch_dashboard" "ecs_cpu_dashboard" {
-  dashboard_name = "ecs_cpu_dashboard"
+  dashboard_name = "Dashboard"
 
   dashboard_body = jsonencode({
+    start = "-PT24H"
     widgets = [
       {
         type   = "metric"
@@ -31,11 +32,18 @@ resource "aws_cloudwatch_dashboard" "ecs_cpu_dashboard" {
         height = 6
         properties = {
           metrics = [
-            [ "AWS/ECS", "CPUUtilization", "ClusterName", aws_ecs_cluster.webcluster.name, "ServiceName", aws_ecs_service.webservice.name ]
+            [
+              "AWS/ECS",
+              "CPUUtilization",
+              "ClusterName",
+              aws_ecs_cluster.webcluster.name,
+              "ServiceName",
+              aws_ecs_service.webservice.name
+            ]
           ]
           view    = "timeSeries"
           stacked = false
-          region  = var.aws_region
+          region  = "eu-central-1"
           stat    = "Average"
           period  = 60
         }
