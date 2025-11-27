@@ -1,8 +1,3 @@
-variable "aws_region" {
-  type    = string
-  default = "eu-west-1"
-}
-
 # CloudWatch CPU alarm
 resource "aws_cloudwatch_metric_alarm" "cpu_high_web" {
   alarm_name          = "cpu_high_web"
