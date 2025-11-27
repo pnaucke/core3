@@ -27,6 +27,13 @@ resource "aws_iam_role_policy_attachment" "ecs_exec_policy" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
+# Login naar ECR
+resource "null_resource" "ecr_login" {
+  provisioner "local-exec" {
+    command = "aws ecr get-login-password --region eu-central-1 | docker login --username AWS --password-stdin ${aws_ecr_repository.website.repository_url}"
+  }
+}
+
 # Docker image build en push naar ECR
 resource "docker_image" "website" {
   name = "${aws_ecr_repository.website.repository_url}:latest"
@@ -37,6 +44,7 @@ resource "docker_image" "website" {
   }
 
   keep_locally = false
+  depends_on   = [null_resource.ecr_login]
 }
 
 # ECS Task Definition met PHP website image
@@ -73,7 +81,7 @@ resource "aws_ecs_service" "webservice" {
   desired_count   = 1
 
   network_configuration {
-    subnets          = [aws_subnet.web_subnet.id]
+    subnets          = [aws_subnet.web_subnet.id]  # private subnet
     assign_public_ip = false
     security_groups  = [aws_security_group.web_sg.id]
   }
