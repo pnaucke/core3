@@ -16,3 +16,4 @@ EXPOSE 80
 
 # Start Apache in de foreground
 CMD ["apache2-foreground"]
+
