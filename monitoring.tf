@@ -25,30 +25,19 @@ resource "aws_cloudwatch_dashboard" "ecs_cpu_dashboard" {
     widgets = [
       {
         type   = "metric"
+        x      = 0
+        y      = 0
         width  = 12
         height = 6
         properties = {
-          region  = var.aws_region
-          title   = "ECS CPU gebruik"
           metrics = [
-            [
-              "AWS/ECS",
-              "CPUUtilization",
-              "ClusterName",
-              aws_ecs_cluster.webcluster.name,
-              "ServiceName",
-              aws_ecs_service.webservice.name
-            ]
+            [ "AWS/ECS", "CPUUtilization", "ClusterName", aws_ecs_cluster.webcluster.name, "ServiceName", aws_ecs_service.webservice.name ]
           ]
           view    = "timeSeries"
           stacked = false
-          period  = 60
+          region  = var.aws_region
           stat    = "Average"
-          annotations = {
-            alarms = [
-              aws_cloudwatch_metric_alarm.cpu_high_web.arn
-            ]
-          }
+          period  = 60
         }
       }
     ]
