@@ -27,7 +27,7 @@ resource "aws_iam_role_policy_attachment" "ecs_exec_policy" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
-# ECS Task Definition met PHP website image
+# ECS Task Definition met jouw PHP website image
 resource "aws_ecs_task_definition" "web_task" {
   family                   = "web_task"
   network_mode             = "awsvpc"
@@ -39,7 +39,7 @@ resource "aws_ecs_task_definition" "web_task" {
   container_definitions = jsonencode([
     {
       name  = "web"
-      image = "${aws_ecr_repository.website.repository_url}:latest"
+      image = docker_image.website.name
       essential = true
       portMappings = [
         {
@@ -52,9 +52,9 @@ resource "aws_ecs_task_definition" "web_task" {
   ])
 }
 
-# ECS Service
+# ECS Service met unieke naam door suffix
 resource "aws_ecs_service" "webservice" {
-  name            = "webserver"
+  name            = "webserver-${random_id.suffix.hex}"
   cluster         = aws_ecs_cluster.webcluster.id
   task_definition = aws_ecs_task_definition.web_task.arn
   launch_type     = "FARGATE"
