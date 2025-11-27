@@ -27,28 +27,21 @@ resource "aws_iam_role_policy_attachment" "ecs_exec_policy" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
-# Login naar ECR
-resource "null_resource" "ecr_login" {
+# Build en push Docker image naar ECR
+resource "null_resource" "push_to_ecr" {
   provisioner "local-exec" {
-    command = "aws ecr get-login-password --region eu-central-1 | docker login --username AWS --password-stdin ${aws_ecr_repository.website.repository_url}"
+    command = <<EOT
+      aws ecr get-login-password --region eu-central-1 | docker login --username AWS --password-stdin ${aws_ecr_repository.website.repository_url}
+      docker build -t ${aws_ecr_repository.website.repository_url}:latest ${path.module}/website
+      docker push ${aws_ecr_repository.website.repository_url}:latest
+    EOT
   }
 }
 
-# Docker image build en push naar ECR
-resource "docker_image" "website" {
-  name = "${aws_ecr_repository.website.repository_url}:latest"
-
-  build {
-    context    = "${path.module}/website"
-    dockerfile = "${path.module}/website/Dockerfile"
-  }
-
-  keep_locally = false
-  depends_on   = [null_resource.ecr_login]
-}
-
-# ECS Task Definition met PHP website image
+# ECS Task Definition met PHP website
 resource "aws_ecs_task_definition" "web_task" {
+  depends_on = [null_resource.push_to_ecr]
+
   family                   = "web_task"
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
@@ -59,7 +52,7 @@ resource "aws_ecs_task_definition" "web_task" {
   container_definitions = jsonencode([
     {
       name      = "web"
-      image     = docker_image.website.name
+      image     = "${aws_ecr_repository.website.repository_url}:latest"
       essential = true
       portMappings = [
         {
@@ -81,7 +74,7 @@ resource "aws_ecs_service" "webservice" {
   desired_count   = 1
 
   network_configuration {
-    subnets          = [aws_subnet.web_subnet.id]  # private subnet
+    subnets          = [aws_subnet.web_subnet.id]
     assign_public_ip = false
     security_groups  = [aws_security_group.web_sg.id]
   }
