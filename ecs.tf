@@ -1,30 +1,3 @@
-# Docker provider
-provider "docker" {}
-
-# ECR repository voor website
-resource "aws_ecr_repository" "website" {
-  name = "my-website"
-}
-
-# ECR authorization token
-data "aws_ecr_authorization_token" "token" {}
-
-# Docker image build en push
-resource "docker_image" "website" {
-  name = "${aws_ecr_repository.website.repository_url}:latest"
-  build {
-    context    = "${path.module}/website"
-    dockerfile = "${path.module}/website/Dockerfile"
-  }
-
-  # Registry login
-  registry_auth {
-    address  = aws_ecr_repository.website.repository_url
-    username = data.aws_ecr_authorization_token.token.user_name
-    password = data.aws_ecr_authorization_token.token.password
-  }
-}
-
 # ECS Cluster
 resource "aws_ecs_cluster" "webcluster" {
   name = "webcluster"
@@ -54,9 +27,17 @@ resource "aws_iam_role_policy_attachment" "ecs_exec_policy" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
-# Random suffix voor unieke ECS service naam
-resource "random_id" "suffix" {
-  byte_length = 2
+# Docker image build en push naar ECR
+resource "docker_image" "website" {
+  name = "${aws_ecr_repository.website.repository_url}:latest"
+
+  build {
+    context    = "${path.module}/website"
+    dockerfile = "${path.module}/website/Dockerfile"
+  }
+
+  # push naar ECR
+  keep_locally = false
 }
 
 # ECS Task Definition met PHP website image
@@ -70,8 +51,8 @@ resource "aws_ecs_task_definition" "web_task" {
 
   container_definitions = jsonencode([
     {
-      name  = "web"
-      image = docker_image.website.name
+      name      = "web"
+      image     = docker_image.website.name
       essential = true
       portMappings = [
         {
@@ -84,16 +65,16 @@ resource "aws_ecs_task_definition" "web_task" {
   ])
 }
 
-# ECS Service met unieke naam door suffix
+# ECS Service
 resource "aws_ecs_service" "webservice" {
-  name            = "webserver-${random_id.suffix.hex}"
+  name            = "webserver"
   cluster         = aws_ecs_cluster.webcluster.id
   task_definition = aws_ecs_task_definition.web_task.arn
   launch_type     = "FARGATE"
   desired_count   = 1
 
   network_configuration {
-    subnets          = [aws_subnet.web_subnet.id]
+    subnets          = [aws_subnet.web_subnet.id]  # private subnet
     assign_public_ip = false
     security_groups  = [aws_security_group.web_sg.id]
   }
