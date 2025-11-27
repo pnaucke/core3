@@ -1,10 +1,13 @@
-# Log group voor VPC Flow Logs
+variable "aws_region" {
+  type = string
+  default = "eu-west-1"
+}
+
 resource "aws_cloudwatch_log_group" "vpc_flowlogs" {
-  name              = "/aws/vpc/flowlogs"
+  name = "/aws/vpc/flowlogs"
   retention_in_days = 7
 }
 
-# IAM role voor flow logs
 resource "aws_iam_role" "flowlog_role" {
   name = "flowlog_role"
 
@@ -22,7 +25,6 @@ resource "aws_iam_role" "flowlog_role" {
   })
 }
 
-# IAM policy
 resource "aws_iam_role_policy" "flowlog_policy" {
   name = "flowlog_policy"
   role = aws_iam_role.flowlog_role.id
@@ -42,7 +44,6 @@ resource "aws_iam_role_policy" "flowlog_policy" {
   })
 }
 
-# Flow logs voor VPC
 resource "aws_flow_log" "vpc_flow" {
   log_destination      = aws_cloudwatch_log_group.vpc_flowlogs.arn
   log_destination_type = "cloud-watch-logs"
@@ -51,7 +52,6 @@ resource "aws_flow_log" "vpc_flow" {
   iam_role_arn         = aws_iam_role.flowlog_role.arn
 }
 
-# Metric filter voor SSH pogingen
 resource "aws_cloudwatch_log_metric_filter" "ssh_unauthorized_filter" {
   name           = "ssh_unauthorized"
   log_group_name = aws_cloudwatch_log_group.vpc_flowlogs.name
@@ -65,7 +65,6 @@ resource "aws_cloudwatch_log_metric_filter" "ssh_unauthorized_filter" {
   }
 }
 
-# Alarm CPU hoog
 resource "aws_cloudwatch_metric_alarm" "cpu_high_web" {
   alarm_name          = "cpu_high_web"
   comparison_operator = "GreaterThanThreshold"
@@ -84,7 +83,6 @@ resource "aws_cloudwatch_metric_alarm" "cpu_high_web" {
   alarm_description = "CPU boven tachtig procent"
 }
 
-# Alarm SSH unauthorized
 resource "aws_cloudwatch_metric_alarm" "ssh_unauthorized_alarm" {
   alarm_name          = "ssh_unauthorized_alarm"
   comparison_operator = "GreaterThanThreshold"
@@ -98,7 +96,6 @@ resource "aws_cloudwatch_metric_alarm" "ssh_unauthorized_alarm" {
   alarm_description = "SSH poging"
 }
 
-# Dashboard
 resource "aws_cloudwatch_dashboard" "main_dashboard" {
   dashboard_name = "web_monitoring"
 
@@ -109,10 +106,19 @@ resource "aws_cloudwatch_dashboard" "main_dashboard" {
         width = 12
         height = 6
         properties = {
+          region = var.aws_region
           metrics = [
-            [ "AWS", "ECS", "CPUUtilization", "ClusterName", aws_ecs_cluster.webcluster.name, "ServiceName", aws_ecs_service.webservice.name ]
+            [
+              "AWS/ECS",
+              "CPUUtilization",
+              "ClusterName",
+              aws_ecs_cluster.webcluster.name,
+              "ServiceName",
+              aws_ecs_service.webservice.name
+            ]
           ]
           title = "CPU gebruik"
+          annotations = {}
         }
       },
       {
@@ -120,10 +126,15 @@ resource "aws_cloudwatch_dashboard" "main_dashboard" {
         width = 12
         height = 6
         properties = {
+          region = var.aws_region
           metrics = [
-            [ "custom", "ssh_unauthorized_count" ]
+            [
+              "custom",
+              "ssh_unauthorized_count"
+            ]
           ]
           title = "SSH pogingen"
+          annotations = {}
         }
       }
     ]
