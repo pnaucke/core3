@@ -32,6 +32,7 @@ resource "null_resource" "push_to_ecr" {
   provisioner "local-exec" {
     command = <<EOT
       aws ecr get-login-password --region eu-central-1 | docker login --username AWS --password-stdin ${aws_ecr_repository.website.repository_url}
+      docker system prune -af
       docker build -t ${aws_ecr_repository.website.repository_url}:latest ${path.module}/website
       docker push ${aws_ecr_repository.website.repository_url}:latest
     EOT
@@ -86,7 +87,10 @@ resource "aws_ecs_service" "webservice" {
     container_port   = 80
   }
 
-  # Zorg dat de service pas start als de listener en NAT klaar zijn
+  lifecycle {
+    create_before_destroy = true
+  }
+
   depends_on = [
     aws_lb_listener.web_listener,
     aws_nat_gateway.nat
