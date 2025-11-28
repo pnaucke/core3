@@ -74,6 +74,10 @@ resource "aws_ecs_service" "webservice" {
   desired_count   = 1
   force_new_deployment = true
 
+  lifecycle {
+    create_before_destroy = true
+  }
+
   network_configuration {
     subnets          = [aws_subnet.web_subnet.id]
     assign_public_ip = false
@@ -91,4 +95,3 @@ resource "aws_ecs_service" "webservice" {
     aws_nat_gateway.nat
   ]
 }
-
