@@ -95,3 +95,4 @@ resource "aws_ecs_service" "webservice" {
     aws_nat_gateway.nat
   ]
 }
+
