@@ -8,11 +8,11 @@ resource "aws_iam_role" "ecs_exec_role" {
   name = "ecs_exec_role"
 
   assume_role_policy = jsonencode({
-    Version = "2012-10-17",
+    Version = "2012-10-17"
     Statement = [
       {
-        Action = "sts:AssumeRole",
-        Effect = "Allow",
+        Action = "sts:AssumeRole"
+        Effect = "Allow"
         Principal = {
           Service = "ecs-tasks.amazonaws.com"
         }
@@ -27,19 +27,18 @@ resource "aws_iam_role_policy_attachment" "ecs_exec_policy" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
-# Build en push Docker image naar ECR, inclusief volledige cleanup
+# Build en push Docker image naar ECR
 resource "null_resource" "push_to_ecr" {
   provisioner "local-exec" {
     command = <<EOT
-      docker system prune --all --force
       aws ecr get-login-password --region eu-central-1 | docker login --username AWS --password-stdin ${aws_ecr_repository.website.repository_url}
-      docker build --no-cache -t ${aws_ecr_repository.website.repository_url}:latest ${path.module}/website
+      docker build -t ${aws_ecr_repository.website.repository_url}:latest ${path.module}/website
       docker push ${aws_ecr_repository.website.repository_url}:latest
     EOT
   }
 }
 
-# Task definition
+# ECS Task Definition met PHP website
 resource "aws_ecs_task_definition" "web_task" {
   depends_on = [null_resource.push_to_ecr]
 
@@ -66,7 +65,7 @@ resource "aws_ecs_task_definition" "web_task" {
   ])
 }
 
-# ECS service
+# ECS Service
 resource "aws_ecs_service" "webservice" {
   name            = "webserver"
   cluster         = aws_ecs_cluster.webcluster.id
@@ -87,6 +86,7 @@ resource "aws_ecs_service" "webservice" {
     container_port   = 80
   }
 
+  # Zorg dat de service pas start als de listener en NAT klaar zijn
   depends_on = [
     aws_lb_listener.web_listener,
     aws_nat_gateway.nat
