@@ -30,11 +30,18 @@ resource "aws_iam_role_policy_attachment" "ecs_exec_policy" {
 # Build en push Docker image naar ECR
 resource "null_resource" "push_to_ecr" {
   provisioner "local-exec" {
-    command = "aws ecr get-login-password --region eu-central-1 | docker login --username AWS --password-stdin ${aws_ecr_repository.website.repository_url} && docker system prune -af && docker build -t ${aws_ecr_repository.website.repository_url}:latest website && docker push ${aws_ecr_repository.website.repository_url}:latest"
+    command = <<EOT
+      aws ecr get-login-password --region eu-central-1 \
+      | docker login --username AWS --password-stdin ${aws_ecr_repository.website.repository_url}
+
+      docker system prune -af
+      docker build -t ${aws_ecr_repository.website.repository_url}:latest ${path.module}/website
+      docker push ${aws_ecr_repository.website.repository_url}:latest
+    EOT
   }
 }
 
-# ECS Task Definition met PHP website
+# ECS Task Definition
 resource "aws_ecs_task_definition" "web_task" {
   depends_on = [null_resource.push_to_ecr]
 
@@ -72,7 +79,7 @@ resource "aws_ecs_service" "webservice" {
 
   network_configuration {
     subnets          = [aws_subnet.web_subnet.id]
-    assign_public_ip = false
+    assign_public_ip = true
     security_groups  = [aws_security_group.web_sg.id]
   }
 
