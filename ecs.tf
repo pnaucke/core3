@@ -79,7 +79,7 @@ resource "aws_ecs_service" "webservice" {
 
   network_configuration {
     subnets          = [aws_subnet.web_subnet.id]
-    assign_public_ip = true
+    assign_public_ip = true  # Zorg dat de taak publiek IP krijgt zodat ALB verbinding kan maken
     security_groups  = [aws_security_group.web_sg.id]
   }
 

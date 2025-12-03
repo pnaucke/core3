@@ -10,6 +10,10 @@ COPY ./ /var/www/html/
 RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 755 /var/www/html
 
+# Voeg een indexbestand toe voor health check
+RUN touch /var/www/html/index.php \
+    && echo "<?php phpinfo(); ?>" > /var/www/html/index.php
+
 # Apache configuratie aanpassen
 RUN echo '<Directory /var/www/html>\n\
     Options Indexes FollowSymLinks\n\
