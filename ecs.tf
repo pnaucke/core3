@@ -30,12 +30,7 @@ resource "aws_iam_role_policy_attachment" "ecs_exec_policy" {
 # Build en push Docker image naar ECR
 resource "null_resource" "push_to_ecr" {
   provisioner "local-exec" {
-    command = <<EOT
-      aws ecr get-login-password --region eu-central-1 | docker login --username AWS --password-stdin ${aws_ecr_repository.website.repository_url}
-      docker system prune -af
-      docker build -t ${aws_ecr_repository.website.repository_url}:latest ${path.module}/website
-      docker push ${aws_ecr_repository.website.repository_url}:latest
-    EOT
+    command = "aws ecr get-login-password --region eu-central-1 | docker login --username AWS --password-stdin ${aws_ecr_repository.website.repository_url} && docker system prune -af && docker build -t ${aws_ecr_repository.website.repository_url}:latest website && docker push ${aws_ecr_repository.website.repository_url}:latest"
   }
 }
 
@@ -96,4 +91,3 @@ resource "aws_ecs_service" "webservice" {
     aws_nat_gateway.nat
   ]
 }
-
