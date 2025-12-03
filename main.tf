@@ -37,4 +37,3 @@ resource "random_id" "suffix" {
 resource "aws_ecr_repository" "website" {
   name = "my-website"
 }
-
