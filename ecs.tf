@@ -29,8 +29,23 @@ resource "aws_iam_role_policy_attachment" "ecs_exec_policy" {
 
 # Build en push Docker image naar ECR
 resource "null_resource" "push_to_ecr" {
+  # Trigger rebuild bij wijzigingen in website directory
+  triggers = {
+    dockerfile_hash = filesha256("${path.module}/website/Dockerfile")
+    app_hash       = filesha256("${path.module}/website/index.php")
+  }
+
   provisioner "local-exec" {
-    command = "TAG=$(date +%Y%m%d-%H%M%S); aws ecr get-login-password --region eu-central-1 | docker login --username AWS --password-stdin ${aws_ecr_repository.website.repository_url} && docker build -t ${aws_ecr_repository.website.repository_url}:$TAG ${path.module}/website && docker push ${aws_ecr_repository.website.repository_url}:$TAG"
+    command = <<EOF
+      # Login naar ECR
+      aws ecr get-login-password --region eu-central-1 | docker login --username AWS --password-stdin ${aws_ecr_repository.website.repository_url}
+      
+      # Build image
+      docker build -t ${aws_ecr_repository.website.repository_url}:latest ${path.module}/website
+      
+      # Push image
+      docker push ${aws_ecr_repository.website.repository_url}:latest
+    EOF
   }
 }
 
@@ -57,6 +72,34 @@ resource "aws_ecs_task_definition" "web_task" {
           protocol      = "tcp"
         }
       ]
+      # Environment variables voor PHP app
+      environment = [
+        {
+          name  = "DB_HOST"
+          value = aws_db_instance.db.address
+        },
+        {
+          name  = "DB_NAME"
+          value = "innovatech"
+        },
+        {
+          name  = "DB_USER"
+          value = "admin"
+        },
+        {
+          name  = "DB_PASSWORD"
+          value = var.db_password
+        }
+      ]
+      # Logging configuratie
+      logConfiguration = {
+        logDriver = "awslogs"
+        options = {
+          "awslogs-group"         = "/ecs/web-task"
+          "awslogs-region"        = "eu-central-1"
+          "awslogs-stream-prefix" = "ecs"
+        }
+      }
     }
   ])
 }
