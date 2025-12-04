@@ -27,17 +27,23 @@ resource "aws_iam_role_policy_attachment" "ecs_exec_policy" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
+# Bepaal unieke tag voor elke build
+locals {
+  image_tag = timestamp()
+}
+
 # Build en push Docker image naar ECR
 resource "null_resource" "push_to_ecr" {
+  triggers = {
+    always_run = local.image_tag
+  }
+
   provisioner "local-exec" {
     command = <<EOT
-      aws ecr get-login-password --region eu-central-1 \
-      | docker login --username AWS --password-stdin ${aws_ecr_repository.website.repository_url}
-
-      docker system prune -af
-      docker build -t ${aws_ecr_repository.website.repository_url}:latest ${path.module}/website
-      docker push ${aws_ecr_repository.website.repository_url}:latest
-    EOT
+aws ecr get-login-password --region eu-central-1 | docker login --username AWS --password-stdin 311471691447.dkr.ecr.eu-central-1.amazonaws.com/my-website
+docker build -t 311471691447.dkr.ecr.eu-central-1.amazonaws.com/my-website:${local.image_tag} ${path.module}/website
+docker push 311471691447.dkr.ecr.eu-central-1.amazonaws.com/my-website:${local.image_tag}
+EOT
   }
 }
 
@@ -55,7 +61,7 @@ resource "aws_ecs_task_definition" "web_task" {
   container_definitions = jsonencode([
     {
       name      = "web"
-      image     = "311471691447.dkr.ecr.eu-central-1.amazonaws.com/my-website:latest"
+      image     = "311471691447.dkr.ecr.eu-central-1.amazonaws.com/my-website:${local.image_tag}"
       essential = true
       portMappings = [
         {
@@ -79,7 +85,7 @@ resource "aws_ecs_service" "webservice" {
 
   network_configuration {
     subnets          = [aws_subnet.web_subnet.id]
-    assign_public_ip = true  # Zorg dat de taak publiek IP krijgt zodat ALB verbinding kan maken
+    assign_public_ip = true
     security_groups  = [aws_security_group.web_sg.id]
   }
 

@@ -1,30 +1,18 @@
+# Gebruik PHP 8.2 met Apache
 FROM php:8.2-apache
 
-# Verwijder oude bestanden
+# Verwijder eventuele oude bestanden uit de webroot
 RUN rm -rf /var/www/html/*
 
-# Kopieer de nieuwe website
-COPY ./ /var/www/html/
+# Kopieer alle bestanden uit de website folder naar de web root
+COPY . /var/www/html/
 
-# Zet juiste rechten voor Apache
+# Zet de juiste rechten voor Apache
 RUN chown -R www-data:www-data /var/www/html \
     && chmod -R 755 /var/www/html
 
-# Voeg een indexbestand toe voor health check
-RUN touch /var/www/html/index.php \
-    && echo "<?php phpinfo(); ?>" > /var/www/html/index.php
-
-# Apache configuratie aanpassen
-RUN echo '<Directory /var/www/html>\n\
-    Options Indexes FollowSymLinks\n\
-    AllowOverride All\n\
-    Require all granted\n\
-</Directory>' > /etc/apache2/conf-available/website.conf \
-    && a2enconf website
-
-# Modules inschakelen
-RUN a2enmod rewrite
-
+# Expose poort 80 voor HTTP verkeer
 EXPOSE 80
 
+# Start Apache in de foreground
 CMD ["apache2-foreground"]
