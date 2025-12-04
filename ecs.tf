@@ -55,7 +55,7 @@ resource "aws_ecs_task_definition" "web_task" {
   container_definitions = jsonencode([
     {
       name      = "web"
-      image     = "${aws_ecr_repository.website.repository_url}:latest"
+      image     = "311471691447.dkr.ecr.eu-central-1.amazonaws.com/my-website:latest"
       essential = true
       portMappings = [
         {
