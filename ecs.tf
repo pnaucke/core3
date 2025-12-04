@@ -31,7 +31,7 @@ resource "aws_iam_role_policy_attachment" "ecs_exec_policy" {
 resource "null_resource" "push_to_ecr" {
   provisioner "local-exec" {
     command = <<EOT
-TAG=$(date +%Y%m%d-%H%M%S)
+TAG=$(date +%Y%m%d-%H%M%S | tr -d '\r')
 aws ecr get-login-password --region eu-central-1 | docker login --username AWS --password-stdin ${aws_ecr_repository.website.repository_url}
 docker build -t ${aws_ecr_repository.website.repository_url}:$TAG ${path.module}/website
 docker push ${aws_ecr_repository.website.repository_url}:$TAG
