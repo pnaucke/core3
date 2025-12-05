@@ -46,12 +46,12 @@ resource "aws_ecs_task_definition" "webserver" {
       {
         name  = "DB_USER"
         value = "admin"
+      },
+      {
+        name  = "DB_PASS"
+        value = var.db_password  # WEER TOEGEVOEGD - nodig voor PHP
       }
-      # DB_PASS is verwijderd uit environment variables
     ]
-    
-    # Database wachtwoord wordt via environment variable doorgegeven
-    # (later kun je dit vervangen door AWS Secrets Manager)
     
     logConfiguration = {
       logDriver = "awslogs"

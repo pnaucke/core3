@@ -20,8 +20,8 @@ terraform {
       version = "~> 3.0"
     }
     mysql = {
-      source = "petoju/mysql"    # Gewijzigde source!
-      version = "~> 3.0"         # Nieuwere versie
+      source  = "terraform-providers/mysql"  # TERUG NAAR DEZE
+      version = "1.9.0"                      # SPECIFIEKE VERSIE
     }
     null = {
       source = "hashicorp/null"

@@ -49,41 +49,49 @@ resource "mysql_grant" "admin_grant" {
   depends_on = [mysql_database.innovatech, mysql_user.admin_user]
 }
 
-# Users tabel aanmaken
-resource "mysql_query" "create_users_table" {
-  query = <<-SQL
-    CREATE TABLE IF NOT EXISTS users (
-      id INT(5) AUTO_INCREMENT PRIMARY KEY,
-      name VARCHAR(50),
-      email VARCHAR(50),
-      department VARCHAR(50),
-      status VARCHAR(50),
-      role VARCHAR(50)
-    )
-  SQL
+# Tabellen aanmaken via null_resource (werkt altijd!)
+resource "null_resource" "create_tables" {
+  triggers = {
+    db_endpoint = aws_db_instance.db.endpoint
+    db_password = var.db_password
+  }
   
-  depends_on = [mysql_grant.admin_grant]
-}
-
-# HR tabel voor login aanmaken
-resource "mysql_query" "create_hr_table" {
-  query = <<-SQL
-    CREATE TABLE IF NOT EXISTS hr (
-      name VARCHAR(50) NOT NULL,
-      password VARCHAR(50)
-    )
-  SQL
+  provisioner "local-exec" {
+    command = <<EOT
+      # Wacht tot database beschikbaar is
+      sleep 30
+      
+      # Creëer users tabel
+      mysql -h ${split(":", aws_db_instance.db.endpoint)[0]} -u admin -p"${var.db_password}" -D innovatech <<MYSQL
+      CREATE TABLE IF NOT EXISTS users (
+        id INT(5) AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(50),
+        email VARCHAR(50),
+        department VARCHAR(50),
+        status VARCHAR(50),
+        role VARCHAR(50)
+      );
+      MYSQL
+      
+      # Creëer hr tabel
+      mysql -h ${split(":", aws_db_instance.db.endpoint)[0]} -u admin -p"${var.db_password}" -D innovatech <<MYSQL
+      CREATE TABLE IF NOT EXISTS hr (
+        name VARCHAR(50) NOT NULL,
+        password VARCHAR(50)
+      );
+      MYSQL
+      
+      # Voeg standaard HR gebruikers toe
+      mysql -h ${split(":", aws_db_instance.db.endpoint)[0]} -u admin -p"${var.db_password}" -D innovatech <<MYSQL
+      INSERT IGNORE INTO hr (name, password) VALUES 
+      ('admin', 'admin123'),
+      ('hr', 'hr123');
+      MYSQL
+    EOT
+  }
   
-  depends_on = [mysql_grant.admin_grant]
-}
-
-# Standaard HR gebruikers toevoegen
-resource "mysql_query" "seed_hr_users" {
-  query = <<-SQL
-    INSERT IGNORE INTO hr (name, password) VALUES 
-    ('admin', 'admin123'),
-    ('hr', 'hr123')
-  SQL
-  
-  depends_on = [mysql_query.create_hr_table]
+  depends_on = [
+    mysql_grant.admin_grant,
+    aws_db_instance.db
+  ]
 }
