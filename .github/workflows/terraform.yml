@@ -25,16 +25,19 @@ jobs:
           aws-region: ${{ env.AWS_REGION }}
 
       - name: Log in to Amazon ECR
-        id: login-ecr  # ID toevoegen
+        id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
 
-      # Docker build en push
+      # Docker build en push vanuit website/ directory
       - name: Build and push Docker image
         run: |
+          # Ga naar website directory
+          cd website
+          
           # Build de Docker image
           docker build -t $ECR_REPOSITORY .
           
-          # Tag voor ECR (gebruik output van login-ecr)
+          # Tag voor ECR
           docker tag $ECR_REPOSITORY:latest ${{ steps.login-ecr.outputs.registry }}/$ECR_REPOSITORY:latest
           
           # Push naar ECR
@@ -54,7 +57,7 @@ jobs:
       - name: Terraform Apply
         run: terraform apply -auto-approve tfplan
 
-      # OPTIONEEL: Forceer nieuwe ECS deployment
+      # Forceer nieuwe ECS deployment voor nieuwe image
       - name: Force ECS Service Update
         run: |
           aws ecs update-service \
