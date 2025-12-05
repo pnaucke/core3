@@ -19,7 +19,7 @@ resource "aws_ecs_task_definition" "webserver" {
 
   container_definitions = jsonencode([{
     name      = "webserver"
-    image     = "php:8.2-apache"
+    image     = "${aws_ecr_repository.website.repository_url}:latest"
     cpu       = 512
     memory    = 1024
     essential = true
@@ -34,8 +34,24 @@ resource "aws_ecs_task_definition" "webserver" {
       {
         name  = "APP_ENV"
         value = "production"
+      },
+      {
+        name  = "DB_HOST"
+        value = split(":", aws_db_instance.db.endpoint)[0]
+      },
+      {
+        name  = "DB_NAME"
+        value = "innovatech"
+      },
+      {
+        name  = "DB_USER"
+        value = "admin"
       }
+      # DB_PASS is verwijderd uit environment variables
     ]
+    
+    # Database wachtwoord wordt via environment variable doorgegeven
+    # (later kun je dit vervangen door AWS Secrets Manager)
     
     logConfiguration = {
       logDriver = "awslogs"

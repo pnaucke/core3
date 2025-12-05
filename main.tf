@@ -19,6 +19,14 @@ terraform {
       source  = "kreuzwerker/docker"
       version = "~> 3.0"
     }
+    mysql = {
+      source = "terraform-providers/mysql"
+      version = "~> 1.9"
+    }
+    null = {
+      source = "hashicorp/null"
+      version = "~> 3.1"
+    }
   }
 
   required_version = ">= 1.5.0"
@@ -29,6 +37,10 @@ provider "aws" {
 }
 
 provider "docker" {}
+
+provider "mysql" {}
+
+provider "null" {}
 
 resource "random_id" "suffix" {
   byte_length = 2

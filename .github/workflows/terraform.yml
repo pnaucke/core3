@@ -8,28 +8,42 @@ jobs:
     runs-on: ubuntu-latest
     env:
       TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
+      AWS_REGION: eu-central-1
+      ECR_REPOSITORY: my-website
+      ECS_CLUSTER: webcluster
+      ECS_SERVICE: webservice
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
-
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v2
-        with:
-          terraform_version: 1.13.2
 
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v2
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          aws-region: eu-central-1
-
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v2
+          aws-region: ${{ env.AWS_REGION }}
 
       - name: Log in to Amazon ECR
+        id: login-ecr  # ID toevoegen
         uses: aws-actions/amazon-ecr-login@v1
+
+      # Docker build en push
+      - name: Build and push Docker image
+        run: |
+          # Build de Docker image
+          docker build -t $ECR_REPOSITORY .
+          
+          # Tag voor ECR (gebruik output van login-ecr)
+          docker tag $ECR_REPOSITORY:latest ${{ steps.login-ecr.outputs.registry }}/$ECR_REPOSITORY:latest
+          
+          # Push naar ECR
+          docker push ${{ steps.login-ecr.outputs.registry }}/$ECR_REPOSITORY:latest
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.13.2
 
       - name: Terraform Init
         run: terraform init -input=false -upgrade
@@ -39,3 +53,12 @@ jobs:
 
       - name: Terraform Apply
         run: terraform apply -auto-approve tfplan
+
+      # OPTIONEEL: Forceer nieuwe ECS deployment
+      - name: Force ECS Service Update
+        run: |
+          aws ecs update-service \
+            --cluster $ECS_CLUSTER \
+            --service $ECS_SERVICE \
+            --force-new-deployment \
+            --region $AWS_REGION
