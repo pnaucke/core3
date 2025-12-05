@@ -37,7 +37,7 @@ resource "aws_ecs_task_definition" "webserver" {
       },
       {
         name  = "DB_HOST"
-        value = split(":", aws_db_instance.db.endpoint)[0]
+        value = aws_db_instance.db.address  # Gebruik .address voor hostname
       },
       {
         name  = "DB_NAME"
@@ -49,7 +49,7 @@ resource "aws_ecs_task_definition" "webserver" {
       },
       {
         name  = "DB_PASS"
-        value = var.db_password  # WEER TOEGEVOEGD - nodig voor PHP
+        value = var.db_password  # Wachtwoord via environment variable
       }
     ]
     
@@ -87,7 +87,10 @@ resource "aws_ecs_service" "webservice" {
     container_port   = 80
   }
 
-  depends_on = [aws_lb_listener.web_listener]
+  depends_on = [
+    aws_lb_listener.web_listener,
+    null_resource.setup_database  # Wacht tot database setup klaar is
+  ]
 
   tags = {
     Name = "webservice"

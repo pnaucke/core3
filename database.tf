@@ -10,7 +10,7 @@ resource "aws_db_instance" "db" {
   engine                  = "mysql"
   engine_version          = "8.0"
   instance_class          = "db.t3.micro"
-  db_name                 = "innovatech"
+  db_name                 = "innovatech"  # Database naam wordt hier gezet
   username                = "admin"
   password                = var.db_password
   parameter_group_name    = "default.mysql8.0"
@@ -24,49 +24,98 @@ resource "aws_db_instance" "db" {
   tags = { Name = "Database" }
 }
 
-# MySQL Provider configuratie
-provider "mysql" {
-  endpoint = aws_db_instance.db.address
-  username = "admin"
-  password = var.db_password
-}
+# VERWIJDER de hele MySQL provider en resources
+# Gebruik alleen null_resource voor database setup
 
-# Database aanmaken
-resource "mysql_database" "innovatech" {
-  name = "innovatech"
-}
-
-# Database gebruiker aanmaken
-resource "mysql_user" "admin_user" {
-  user               = "admin"
-  host               = "%"
-  plaintext_password = var.db_password
-}
-
-# Rechten geven aan gebruiker
-resource "mysql_grant" "admin_grant" {
-  user       = mysql_user.admin_user.user
-  host       = mysql_user.admin_user.host
-  database   = mysql_database.innovatech.name
-  privileges = ["ALL"]
-}
-
-# Wacht op RDS en security groups voordat we tabellen aanmaken
-resource "null_resource" "wait_for_rds" {
+# Wacht op RDS om volledig op te starten
+resource "null_resource" "setup_database" {
   triggers = {
-    rds_id = aws_db_instance.db.id
-    sg_id  = aws_security_group.db_sg.id
+    rds_instance_id = aws_db_instance.db.id
+    db_password     = var.db_password
   }
   
   provisioner "local-exec" {
     command = <<EOT
-      echo "Wachten op RDS database om op te starten..."
-      echo "Dit kan 10-15 minuten duren..."
+      echo "=== DATABASE SETUP PROCES ==="
+      echo "Dit kan 10-15 minuten duren voor RDS klaar is..."
       
-      # Wacht minimaal 2 minuten
-      sleep 120
+      DB_HOST="${aws_db_instance.db.address}"
+      DB_PASS="${var.db_password}"
       
-      echo "Controleer database connectie..."
+      # STAP 1: Wacht tot RDS beschikbaar is (max 20 minuten)
+      echo "STAP 1: Wachten op RDS..."
+      MAX_WAIT=1200  # 20 minuten in seconden
+      WAIT_INTERVAL=30
+      elapsed=0
+      connected=false
+      
+      while [ $elapsed -lt $MAX_WAIT ]; do
+        echo "  Poging: $((elapsed/60))m $((elapsed%60))s verstreken..."
+        
+        if mysql -h $DB_HOST -u admin -p"$DB_PASS" -e "SELECT 1;" 2>/dev/null; then
+          echo "  ✓ RDS is beschikbaar!"
+          connected=true
+          break
+        fi
+        
+        echo "  × Nog niet beschikbaar, wachten $WAIT_INTERVAL seconden..."
+        sleep $WAIT_INTERVAL
+        elapsed=$((elapsed + WAIT_INTERVAL))
+      done
+      
+      if [ "$connected" = false ]; then
+        echo "FOUT: RDS niet beschikbaar na $((MAX_WAIT/60)) minuten"
+        exit 1
+      fi
+      
+      # STAP 2: Database aanmaken (als die niet al bestaat via db_name parameter)
+      echo "STAP 2: Database verifiëren..."
+      mysql -h $DB_HOST -u admin -p"$DB_PASS" -e "CREATE DATABASE IF NOT EXISTS innovatech;"
+      
+      # STAP 3: Users tabel aanmaken
+      echo "STAP 3: Users tabel aanmaken..."
+      mysql -h $DB_HOST -u admin -p"$DB_PASS" -D innovatech <<MYSQL
+      CREATE TABLE IF NOT EXISTS users (
+        id INT(5) AUTO_INCREMENT PRIMARY KEY,
+        name VARCHAR(50),
+        email VARCHAR(50),
+        department VARCHAR(50),
+        status VARCHAR(50),
+        role VARCHAR(50)
+      );
+      MYSQL
+      
+      # STAP 4: HR tabel aanmaken
+      echo "STAP 4: HR tabel aanmaken..."
+      mysql -h $DB_HOST -u admin -p"$DB_PASS" -D innovatech <<MYSQL
+      CREATE TABLE IF NOT EXISTS hr (
+        name VARCHAR(50) NOT NULL,
+        password VARCHAR(50)
+      );
+      MYSQL
+      
+      # STAP 5: Standaard HR gebruikers toevoegen
+      echo "STAP 5: Standaard gebruikers toevoegen..."
+      mysql -h $DB_HOST -u admin -p"$DB_PASS" -D innovatech <<MYSQL
+      INSERT IGNORE INTO hr (name, password) VALUES 
+      ('admin', 'admin123'),
+      ('hr', 'hr123');
+      MYSQL
+      
+      # STAP 6: Test data toevoegen (optioneel)
+      echo "STAP 6: Test data toevoegen..."
+      mysql -h $DB_HOST -u admin -p"$DB_PASS" -D innovatech <<MYSQL
+      INSERT IGNORE INTO users (name, email, department, status, role) VALUES
+      ('John Doe', 'john@innovatech.com', 'IT', 'Active', 'Manager'),
+      ('Jane Smith', 'jane@innovatech.com', 'HR', 'Active', 'Accountant'),
+      ('Bob Wilson', 'bob@innovatech.com', 'Facilities', 'Active', 'Cleaner');
+      MYSQL
+      
+      echo "=== DATABASE SETUP VOLTOOID ==="
+      echo "Database: innovatech"
+      echo "Host: $DB_HOST"
+      echo "Tabellen: users, hr"
+      echo "Test gebruikers: admin/admin123, hr/hr123"
     EOT
   }
   
@@ -74,82 +123,5 @@ resource "null_resource" "wait_for_rds" {
     aws_db_instance.db,
     aws_security_group.db_sg,
     aws_security_group.web_sg
-  ]
-}
-
-# Tabellen aanmaken - PAS NADAT wait_for_rds klaar is
-resource "null_resource" "create_tables" {
-  triggers = {
-    always_run = timestamp()
-  }
-  
-  provisioner "local-exec" {
-    command = <<EOT
-      echo "=== TABELLEN AANMAKEN PROCES ==="
-      
-      DB_HOST="${aws_db_instance.db.address}"
-      DB_PASS="${var.db_password}"
-      
-      # Probeer verbinding te maken (max 20 pogingen, elke 30 seconden = 10 minuten)
-      MAX_RETRIES=20
-      RETRY_INTERVAL=30
-      
-      for ((i=1; i<=MAX_RETRIES; i++)); do
-        echo "Poging $i/$MAX_RETRIES om verbinding te maken..."
-        
-        if mysql -h $DB_HOST -u admin -p"$DB_PASS" -e "SELECT 1;" 2>/dev/null; then
-          echo "✓ Verbinding succesvol!"
-          
-          # Creëer users tabel
-          echo "Users tabel aanmaken..."
-          mysql -h $DB_HOST -u admin -p"$DB_PASS" -D innovatech <<MYSQL
-          CREATE TABLE IF NOT EXISTS users (
-            id INT(5) AUTO_INCREMENT PRIMARY KEY,
-            name VARCHAR(50),
-            email VARCHAR(50),
-            department VARCHAR(50),
-            status VARCHAR(50),
-            role VARCHAR(50)
-          );
-          MYSQL
-          
-          # Creëer hr tabel
-          echo "HR tabel aanmaken..."
-          mysql -h $DB_HOST -u admin -p"$DB_PASS" -D innovatech <<MYSQL
-          CREATE TABLE IF NOT EXISTS hr (
-            name VARCHAR(50) NOT NULL,
-            password VARCHAR(50)
-          );
-          MYSQL
-          
-          # Voeg standaard HR gebruikers toe
-          echo "Standaard gebruikers toevoegen..."
-          mysql -h $DB_HOST -u admin -p"$DB_PASS" -D innovatech <<MYSQL
-          INSERT IGNORE INTO hr (name, password) VALUES 
-          ('admin', 'admin123'),
-          ('hr', 'hr123');
-          MYSQL
-          
-          echo "=== TABELLEN SUCCESVOL AANGEMAAKT ==="
-          exit 0
-        else
-          echo "× Geen verbinding, wachten $RETRY_INTERVAL seconden..."
-          sleep $RETRY_INTERVAL
-        fi
-      done
-      
-      echo "=== FOUILLAGE: Kon geen verbinding maken na $MAX_RETRIES pogingen ==="
-      echo "Controleer:"
-      echo "1. Is RDS instance running?"
-      echo "2. Zijn security groups correct?"
-      echo "3. Is het wachtwoord correct?"
-      exit 1
-    EOT
-  }
-  
-  depends_on = [
-    null_resource.wait_for_rds,
-    mysql_database.innovatech,
-    mysql_grant.admin_grant
   ]
 }
