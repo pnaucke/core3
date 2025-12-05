@@ -20,8 +20,8 @@ terraform {
       version = "~> 3.0"
     }
     mysql = {
-      source = "terraform-providers/mysql"
-      version = "~> 1.9"
+      source = "petoju/mysql"    # Gewijzigde source!
+      version = "~> 3.0"         # Nieuwere versie
     }
     null = {
       source = "hashicorp/null"
@@ -38,7 +38,7 @@ provider "aws" {
 
 provider "docker" {}
 
-provider "null" {}  # Alleen null provider hier
+provider "null" {}
 
 resource "random_id" "suffix" {
   byte_length = 2

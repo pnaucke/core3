@@ -23,22 +23,24 @@ resource "aws_db_instance" "db" {
 
 # MySQL Provider om tabellen aan te maken
 provider "mysql" {
-  endpoint = split(":", aws_db_instance.db.endpoint)[0]  # Alleen hostname, geen port
+  endpoint = split(":", aws_db_instance.db.endpoint)[0]
   username = "admin"
   password = var.db_password
 }
 
-# Tabellen aanmaken in de database
+# Database aanmaken
 resource "mysql_database" "innovatech" {
   name = "innovatech"
 }
 
+# Database gebruiker aanmaken
 resource "mysql_user" "admin_user" {
   user               = "admin"
   host               = "%"
   plaintext_password = var.db_password
 }
 
+# Rechten geven aan gebruiker
 resource "mysql_grant" "admin_grant" {
   user       = mysql_user.admin_user.user
   host       = mysql_user.admin_user.host
@@ -47,88 +49,41 @@ resource "mysql_grant" "admin_grant" {
   depends_on = [mysql_database.innovatech, mysql_user.admin_user]
 }
 
-# Users tabel
-resource "mysql_table" "users" {
-  database = mysql_database.innovatech.name
-  name     = "users"
-  
-  column {
-    name     = "id"
-    type     = "INT"
-    size     = 5
-    null     = false
-    key      = "PRI"
-    extra    = "AUTO_INCREMENT"
-  }
-  
-  column {
-    name = "name"
-    type = "VARCHAR"
-    size = 50
-  }
-  
-  column {
-    name = "email"
-    type = "VARCHAR"
-    size = 50
-  }
-  
-  column {
-    name = "department"
-    type = "VARCHAR"
-    size = 50
-  }
-  
-  column {
-    name = "status"
-    type = "VARCHAR"
-    size = 50
-  }
-  
-  column {
-    name = "role"
-    type = "VARCHAR"
-    size = 50
-  }
+# Users tabel aanmaken
+resource "mysql_query" "create_users_table" {
+  query = <<-SQL
+    CREATE TABLE IF NOT EXISTS users (
+      id INT(5) AUTO_INCREMENT PRIMARY KEY,
+      name VARCHAR(50),
+      email VARCHAR(50),
+      department VARCHAR(50),
+      status VARCHAR(50),
+      role VARCHAR(50)
+    )
+  SQL
   
   depends_on = [mysql_grant.admin_grant]
 }
 
-# HR tabel voor login
-resource "mysql_table" "hr" {
-  database = mysql_database.innovatech.name
-  name     = "hr"
-  
-  column {
-    name = "name"
-    type = "VARCHAR"
-    size = 50
-    null = false
-  }
-  
-  column {
-    name = "password"
-    type = "VARCHAR"
-    size = 50
-  }
+# HR tabel voor login aanmaken
+resource "mysql_query" "create_hr_table" {
+  query = <<-SQL
+    CREATE TABLE IF NOT EXISTS hr (
+      name VARCHAR(50) NOT NULL,
+      password VARCHAR(50)
+    )
+  SQL
   
   depends_on = [mysql_grant.admin_grant]
 }
 
-# Voeg een standaard HR gebruiker toe
-resource "null_resource" "seed_hr_user" {
-  triggers = {
-    db_endpoint = aws_db_instance.db.endpoint
-  }
+# Standaard HR gebruikers toevoegen
+resource "mysql_query" "seed_hr_users" {
+  query = <<-SQL
+    INSERT IGNORE INTO hr (name, password) VALUES 
+    ('admin', 'admin123'),
+    ('hr', 'hr123')
+  SQL
   
-  provisioner "local-exec" {
-    command = <<EOT
-      mysql -h ${split(":", aws_db_instance.db.endpoint)[0]} -u admin -p"${var.db_password}" -D innovatech <<MYSQL
-      INSERT IGNORE INTO hr (name, password) VALUES ('admin', 'admin123');
-      INSERT IGNORE INTO hr (name, password) VALUES ('hr', 'hr123');
-      MYSQL
-    EOT
-  }
-  
-  depends_on = [mysql_table.hr]
+  depends_on = [mysql_query.create_hr_table]
 }
