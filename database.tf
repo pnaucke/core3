@@ -15,40 +15,42 @@ resource "aws_db_instance" "db" {
   password                = var.db_password
   parameter_group_name    = "default.mysql8.0"
   skip_final_snapshot     = true
-  vpc_security_group_ids  = [aws_security_group.db_sg.id]  # Security group uit security.tf
+  vpc_security_group_ids  = [aws_security_group.db_sg.id]
   db_subnet_group_name    = aws_db_subnet_group.db_subnet_group.name
   publicly_accessible     = false
   
-  # Voeg timeouts toe
   apply_immediately       = true
   
   tags = { Name = "Database" }
 }
 
-# MySQL Provider om tabellen aan te maken - WACHT OP RDS EN SECURITY GROUPS
+# MySQL Provider configuratie
 provider "mysql" {
   endpoint = aws_db_instance.db.address
   username = "admin"
   password = var.db_password
-  
-  # BELANGRIJK: Wacht tot security group EN RDS ready zijn
-  depends_on = [
-    aws_security_group.db_sg,    # Security group moet bestaan
-    aws_db_instance.db           # RDS moet running zijn
-  ]
 }
 
-# Database aanmaken
+# Database aanmaken - MET DUMMY WAARDE OM AFHANKELIJKHEID TE FORCEREN
 resource "mysql_database" "innovatech" {
   name = "innovatech"
   
-  # Wacht tot provider kan connecten
-  depends_on = [
-    aws_security_group.db_sg,
-    aws_db_instance.db
-  ]
+  # Wacht op RDS en security groups via een dummy trigger
+  provisioner "local-exec" {
+    command = "echo 'Waiting for RDS to be ready...' && sleep 30"
+    
+    # Deze triggers zorgen ervoor dat we wachten op de juiste resources
+    when = create
+  }
   
-  # Langer timeout voor RDS
+  # Lifecycle om te zorgen dat de provider eerst kan initialiseren
+  lifecycle {
+    precondition {
+      condition     = aws_db_instance.db.status == "available"
+      error_message = "RDS database must be in 'available' status before creating MySQL resources"
+    }
+  }
+  
   timeouts {
     create = "20m"
     delete = "20m"
@@ -83,26 +85,42 @@ resource "mysql_grant" "admin_grant" {
   ]
 }
 
-# Tabellen aanmaken via null_resource
-resource "null_resource" "create_tables" {
+# Simpele null_resource die wacht tot alles klaar is
+resource "null_resource" "wait_for_rds" {
   triggers = {
-    db_endpoint = aws_db_instance.db.endpoint
-    db_password = var.db_password
-    always_run  = timestamp()  # Forceer altijd run
+    rds_id = aws_db_instance.db.id
   }
   
   provisioner "local-exec" {
     command = <<EOT
-      echo "Wachten op RDS database beschikbaarheid..."
+      echo "Wachten op RDS database..."
+      sleep 120  # Wacht 2 minuten voor RDS om op te starten
+    EOT
+  }
+  
+  depends_on = [
+    aws_db_instance.db,
+    aws_security_group.db_sg,
+    aws_security_group.web_sg
+  ]
+}
+
+# Tabellen aanmaken - PAS NADAT wait_for_rds klaar is
+resource "null_resource" "create_tables" {
+  triggers = {
+    always_run = timestamp()
+  }
+  
+  provisioner "local-exec" {
+    command = <<EOT
+      echo "Proberen tabellen aan te maken..."
       
-      # Wacht maximaal 5 minuten
-      timeout=300
-      interval=10
-      elapsed=0
-      
-      while [ $elapsed -lt $timeout ]; do
+      # Probeer maximaal 10 keer met 30 seconden interval
+      for i in {1..10}; do
+        echo "Poging $i..."
+        
         if mysql -h ${aws_db_instance.db.address} -u admin -p"${var.db_password}" -e "SELECT 1;" 2>/dev/null; then
-          echo "✓ Database is beschikbaar na ${elapsed} seconden"
+          echo "Database is beschikbaar!"
           
           # Creëer users tabel
           mysql -h ${aws_db_instance.db.address} -u admin -p"${var.db_password}" -D innovatech <<MYSQL
@@ -131,24 +149,21 @@ resource "null_resource" "create_tables" {
           ('hr', 'hr123');
           MYSQL
           
-          echo "✓ Tabellen succesvol aangemaakt!"
+          echo "Tabellen succesvol aangemaakt!"
           exit 0
         fi
         
-        echo "Wachten... ($((elapsed)) seconden)"
-        sleep $interval
-        elapsed=$((elapsed + interval))
+        echo "Database nog niet beschikbaar, wachten 30 seconden..."
+        sleep 30
       done
       
-      echo "✗ Timeout: Database niet beschikbaar na $timeout seconden"
+      echo "FOUT: Kon geen verbinding maken met database na 10 pogingen"
       exit 1
     EOT
   }
   
   depends_on = [
-    mysql_grant.admin_grant,
-    aws_db_instance.db,
-    aws_security_group.db_sg,
-    aws_security_group.web_sg  # Web SG moet ook bestaan voor connectie
+    null_resource.wait_for_rds,
+    mysql_grant.admin_grant
   ]
 }
