@@ -30,6 +30,15 @@ resource "aws_ecs_task_definition" "webserver" {
       protocol      = "tcp"
     }]
     
+    # HEALTH CHECK toegevoegd
+    healthCheck = {
+      command     = ["CMD-SHELL", "curl -f http://localhost/ || exit 1"]
+      interval    = 30
+      timeout     = 5
+      retries     = 3
+      startPeriod = 60
+    }
+    
     environment = [
       {
         name  = "APP_ENV"
@@ -37,7 +46,7 @@ resource "aws_ecs_task_definition" "webserver" {
       },
       {
         name  = "DB_HOST"
-        value = aws_db_instance.db.address  # Gebruik .address voor hostname
+        value = aws_db_instance.db.address
       },
       {
         name  = "DB_NAME"
@@ -49,7 +58,7 @@ resource "aws_ecs_task_definition" "webserver" {
       },
       {
         name  = "DB_PASS"
-        value = var.db_password  # Wachtwoord via environment variable
+        value = var.db_password
       }
     ]
     
@@ -74,6 +83,9 @@ resource "aws_ecs_service" "webservice" {
   task_definition = aws_ecs_task_definition.webserver.arn
   desired_count   = 1
   launch_type     = "FARGATE"
+  
+  # Health check grace period - geef container tijd om op te starten
+  health_check_grace_period_seconds = 120
 
   network_configuration {
     subnets          = [aws_subnet.web_subnet.id]
@@ -89,11 +101,36 @@ resource "aws_ecs_service" "webservice" {
 
   depends_on = [
     aws_lb_listener.web_listener,
-    null_resource.setup_database  # Wacht tot database setup klaar is
+    null_resource.setup_database
   ]
 
   tags = {
     Name = "webservice"
+  }
+}
+
+# Update de load balancer target group health check
+resource "aws_lb_target_group" "web_tg" {
+  name        = "web-tg"
+  port        = 80
+  protocol    = "HTTP"
+  vpc_id      = aws_vpc.main.id
+  target_type = "ip"
+  
+  # Verbeterde health check
+  health_check {
+    protocol            = "HTTP"
+    path                = "/"
+    port                = "traffic-port"
+    healthy_threshold   = 2
+    unhealthy_threshold = 3
+    timeout             = 5
+    interval            = 30
+    matcher             = "200"
+  }
+
+  tags = {
+    Name = "web_tg"
   }
 }
 
