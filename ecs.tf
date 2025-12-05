@@ -94,7 +94,7 @@ resource "aws_ecs_service" "webservice" {
   }
 
   load_balancer {
-    target_group_arn = aws_lb_target_group.web_tg.arn
+    target_group_arn = aws_lb_target_group.web_tg.arn  # Gebruik de target group uit loadbalancer.tf
     container_name   = "webserver"
     container_port   = 80
   }
@@ -109,30 +109,30 @@ resource "aws_ecs_service" "webservice" {
   }
 }
 
-# Update de load balancer target group health check
-resource "aws_lb_target_group" "web_tg" {
-  name        = "web-tg"
-  port        = 80
-  protocol    = "HTTP"
-  vpc_id      = aws_vpc.main.id
-  target_type = "ip"
-  
-  # Verbeterde health check
-  health_check {
-    protocol            = "HTTP"
-    path                = "/"
-    port                = "traffic-port"
-    healthy_threshold   = 2
-    unhealthy_threshold = 3
-    timeout             = 5
-    interval            = 30
-    matcher             = "200"
-  }
-
-  tags = {
-    Name = "web_tg"
-  }
-}
+# VERWIJDER DEZE HELE TARGET GROUP - STAAT AL IN loadbalancer.tf
+# resource "aws_lb_target_group" "web_tg" {
+#   name        = "web-tg"
+#   port        = 80
+#   protocol    = "HTTP"
+#   vpc_id      = aws_vpc.main.id
+#   target_type = "ip"
+#   
+#   # Verbeterde health check
+#   health_check {
+#     protocol            = "HTTP"
+#     path                = "/"
+#     port                = "traffic-port"
+#     healthy_threshold   = 2
+#     unhealthy_threshold = 3
+#     timeout             = 5
+#     interval            = 30
+#     matcher             = "200"
+#   }
+#
+#   tags = {
+#     Name = "web_tg"
+#   }
+# }
 
 # IAM Rollen voor ECS
 resource "aws_iam_role" "ecs_execution_role" {
