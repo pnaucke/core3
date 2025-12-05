@@ -1,98 +1,121 @@
-# ECS Cluster
+# ECS Cluster en Service voor PHP webserver
 resource "aws_ecs_cluster" "webcluster" {
   name = "webcluster"
-}
-
-# IAM role voor ECS tasks
-resource "aws_iam_role" "ecs_exec_role" {
-  name = "ecs_exec_role"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = "sts:AssumeRole"
-        Effect = "Allow"
-        Principal = {
-          Service = "ecs-tasks.amazonaws.com"
-        }
-      }
-    ]
-  })
-}
-
-# IAM policy attachment
-resource "aws_iam_role_policy_attachment" "ecs_exec_policy" {
-  role       = aws_iam_role.ecs_exec_role.name
-  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
-}
-
-# Build en push Docker image naar ECR
-resource "null_resource" "push_to_ecr" {
-  provisioner "local-exec" {
-    command = <<EOT
-      aws ecr get-login-password --region eu-central-1 | docker login --username AWS --password-stdin ${aws_ecr_repository.website.repository_url}
-      docker system prune -af
-      docker build -t ${aws_ecr_repository.website.repository_url}:latest ${path.module}/website
-      docker push ${aws_ecr_repository.website.repository_url}:latest
-    EOT
+  
+  setting {
+    name  = "containerInsights"
+    value = "enabled"
   }
 }
 
-# ECS Task Definition met PHP website
-resource "aws_ecs_task_definition" "web_task" {
-  depends_on = [null_resource.push_to_ecr]
-
-  family                   = "web_task"
+resource "aws_ecs_task_definition" "webserver" {
+  family                   = "webserver"
   network_mode             = "awsvpc"
   requires_compatibilities = ["FARGATE"]
   cpu                      = "512"
   memory                   = "1024"
-  execution_role_arn       = aws_iam_role.ecs_exec_role.arn
+  execution_role_arn       = aws_iam_role.ecs_execution_role.arn
+  task_role_arn            = aws_iam_role.ecs_task_role.arn
 
-  container_definitions = jsonencode([
-    {
-      name      = "web"
-      image     = "${aws_ecr_repository.website.repository_url}:latest"
-      essential = true
-      portMappings = [
-        {
-          containerPort = 80
-          hostPort      = 80
-          protocol      = "tcp"
-        }
-      ]
+  container_definitions = jsonencode([{
+    name      = "webserver"
+    image     = "php:8.2-apache"
+    cpu       = 512
+    memory    = 1024
+    essential = true
+    
+    portMappings = [{
+      containerPort = 80
+      hostPort      = 80
+      protocol      = "tcp"
+    }]
+    
+    environment = [
+      {
+        name  = "APP_ENV"
+        value = "production"
+      }
+    ]
+    
+    logConfiguration = {
+      logDriver = "awslogs"
+      options = {
+        "awslogs-group"         = "/ecs/webserver"
+        "awslogs-region"        = "eu-central-1"
+        "awslogs-stream-prefix" = "ecs"
+      }
     }
-  ])
+  }])
+
+  tags = {
+    Name = "webserver-task"
+  }
 }
 
-# ECS Service
 resource "aws_ecs_service" "webservice" {
-  name            = "webserver"
+  name            = "webservice"
   cluster         = aws_ecs_cluster.webcluster.id
-  task_definition = aws_ecs_task_definition.web_task.arn
-  launch_type     = "FARGATE"
+  task_definition = aws_ecs_task_definition.webserver.arn
   desired_count   = 1
-  force_new_deployment = true
+  launch_type     = "FARGATE"
 
   network_configuration {
     subnets          = [aws_subnet.web_subnet.id]
-    assign_public_ip = false
     security_groups  = [aws_security_group.web_sg.id]
+    assign_public_ip = false
   }
 
   load_balancer {
     target_group_arn = aws_lb_target_group.web_tg.arn
-    container_name   = "web"
+    container_name   = "webserver"
     container_port   = 80
   }
 
-  lifecycle {
-    create_before_destroy = true
-  }
+  depends_on = [aws_lb_listener.web_listener]
 
-  depends_on = [
-    aws_lb_listener.web_listener,
-    aws_nat_gateway.nat
-  ]
+  tags = {
+    Name = "webservice"
+  }
+}
+
+# IAM Rollen voor ECS
+resource "aws_iam_role" "ecs_execution_role" {
+  name = "ecs_execution_role_${random_id.suffix.hex}"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Action = "sts:AssumeRole"
+      Effect = "Allow"
+      Principal = {
+        Service = "ecs-tasks.amazonaws.com"
+      }
+    }]
+  })
+}
+
+resource "aws_iam_role_policy_attachment" "ecs_execution_role_policy" {
+  role       = aws_iam_role.ecs_execution_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
+}
+
+resource "aws_iam_role" "ecs_task_role" {
+  name = "ecs_task_role_${random_id.suffix.hex}"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Action = "sts:AssumeRole"
+      Effect = "Allow"
+      Principal = {
+        Service = "ecs-tasks.amazonaws.com"
+      }
+    }]
+  })
+}
+
+# CloudWatch Log Group voor ECS logs
+resource "aws_cloudwatch_log_group" "ecs_webserver" {
+  name              = "/ecs/webserver"
+  retention_in_days = 7
 }
