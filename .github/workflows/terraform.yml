@@ -28,20 +28,20 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
 
-      # Docker build en push vanuit website/ directory
+      # Docker build en push - DOCKERFILE IS IN ROOT!
       - name: Build and push Docker image
         run: |
-          # Ga naar website directory
-          cd website
-          
-          # Build de Docker image
+          # Dockerfile staat in root, dus bouw vanuit root
+          echo "🛠️ Building Docker image from root directory..."
           docker build -t $ECR_REPOSITORY .
           
           # Tag voor ECR
           docker tag $ECR_REPOSITORY:latest ${{ steps.login-ecr.outputs.registry }}/$ECR_REPOSITORY:latest
           
           # Push naar ECR
+          echo "📤 Pushing to ECR..."
           docker push ${{ steps.login-ecr.outputs.registry }}/$ECR_REPOSITORY:latest
+          echo "✅ Docker image pushed successfully"
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
@@ -60,8 +60,30 @@ jobs:
       # Forceer nieuwe ECS deployment voor nieuwe image
       - name: Force ECS Service Update
         run: |
+          echo "🔄 Forcing new ECS deployment..."
           aws ecs update-service \
             --cluster $ECS_CLUSTER \
             --service $ECS_SERVICE \
             --force-new-deployment \
             --region $AWS_REGION
+          
+          echo "⏳ Waiting for deployment to stabilize..."
+          sleep 30
+
+      # Cleanup oude ECR images (optioneel)
+      - name: Cleanup old ECR images
+        if: always()
+        run: |
+          echo "🧹 Cleaning up old ECR images..."
+          # Probeer oude images te verwijderen, maar faal niet als het niet lukt
+          aws ecr describe-images \
+            --repository-name $ECR_REPOSITORY \
+            --region $AWS_REGION \
+            --query 'imageDetails | sort_by(@, &imagePushedAt) | [:-3].[imageDigest]' \
+            --output text 2>/dev/null | \
+            xargs -I {} aws ecr batch-delete-image \
+              --repository-name $ECR_REPOSITORY \
+              --image-ids imageDigest={} \
+              --region $AWS_REGION 2>/dev/null || echo "No old images to delete"
+          
+          echo "✅ Cleanup completed"
