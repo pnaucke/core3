@@ -38,9 +38,7 @@ provider "aws" {
 
 provider "docker" {}
 
-provider "mysql" {}
-
-provider "null" {}
+provider "null" {}  # Alleen null provider hier
 
 resource "random_id" "suffix" {
   byte_length = 2
