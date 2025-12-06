@@ -1,39 +1,89 @@
-name: Deploy to AWS
+name: Terraform Auto Deploy
 
 on:
-  push:
-    branches: [ main ]
-
-env:
-  AWS_REGION: eu-central-1
-  TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
-  TF_VAR_hr_password: ${{ secrets.HR_PASSWORD }}  # Alleen deze
+  push: {}
 
 jobs:
-  deploy:
+  terraform:
     runs-on: ubuntu-latest
-    
+    env:
+      TF_VAR_db_password: ${{ secrets.DB_PASSWORD }}
+      AWS_REGION: eu-central-1
+      ECR_REPOSITORY: my-website
+      ECS_CLUSTER: webcluster
+      ECS_SERVICE: webservice
+
     steps:
-    - uses: actions/checkout@v2
-    
-    - name: Setup Terraform
-      uses: hashicorp/setup-terraform@v1
-    
-    - name: Configure AWS credentials
-      uses: aws-actions/configure-aws-credentials@v1
-      with:
-        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-        aws-region: ${{ env.AWS_REGION }}
-    
-    - name: Terraform Init
-      run: terraform init
-      working-directory: ./terraform
-      
-    - name: Terraform Plan
-      run: terraform plan
-      working-directory: ./terraform
-    
-    - name: Terraform Apply
-      run: terraform apply -auto-approve
-      working-directory: ./terraform
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Log in to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      # Docker build en push - DOCKERFILE IS IN ROOT!
+      - name: Build and push Docker image
+        run: |
+          # Dockerfile staat in root, dus bouw vanuit root
+          echo "🛠️ Building Docker image from root directory..."
+          docker build -t $ECR_REPOSITORY .
+          
+          # Tag voor ECR
+          docker tag $ECR_REPOSITORY:latest ${{ steps.login-ecr.outputs.registry }}/$ECR_REPOSITORY:latest
+          
+          # Push naar ECR
+          echo "📤 Pushing to ECR..."
+          docker push ${{ steps.login-ecr.outputs.registry }}/$ECR_REPOSITORY:latest
+          echo "✅ Docker image pushed successfully"
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v2
+        with:
+          terraform_version: 1.13.2
+
+      - name: Terraform Init
+        run: terraform init -input=false -upgrade
+
+      - name: Terraform Plan
+        run: terraform plan -out=tfplan -input=false
+
+      - name: Terraform Apply
+        run: terraform apply -auto-approve tfplan
+
+      # Forceer nieuwe ECS deployment voor nieuwe image
+      - name: Force ECS Service Update
+        run: |
+          echo "🔄 Forcing new ECS deployment..."
+          aws ecs update-service \
+            --cluster $ECS_CLUSTER \
+            --service $ECS_SERVICE \
+            --force-new-deployment \
+            --region $AWS_REGION
+          
+          echo "⏳ Waiting for deployment to stabilize..."
+          sleep 30
+
+      # Cleanup oude ECR images (optioneel)
+      - name: Cleanup old ECR images
+        if: always()
+        run: |
+          echo "🧹 Cleaning up old ECR images..."
+          # Probeer oude images te verwijderen, maar faal niet als het niet lukt
+          aws ecr describe-images \
+            --repository-name $ECR_REPOSITORY \
+            --region $AWS_REGION \
+            --query 'imageDetails | sort_by(@, &imagePushedAt) | [:-3].[imageDigest]' \
+            --output text 2>/dev/null | \
+            xargs -I {} aws ecr batch-delete-image \
+              --repository-name $ECR_REPOSITORY \
+              --image-ids imageDigest={} \
+              --region $AWS_REGION 2>/dev/null || echo "No old images to delete"
+          
+          echo "✅ Cleanup completed"
