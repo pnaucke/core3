@@ -100,8 +100,8 @@ resource "aws_ecs_service" "webservice" {
   }
 
   depends_on = [
-    aws_lb_listener.web_listener,
-    null_resource.setup_database
+    aws_lb_listener.web_listener
+    # null_resource.setup_database is verwijderd
   ]
 
   tags = {
