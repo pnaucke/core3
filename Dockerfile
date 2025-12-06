@@ -6,7 +6,6 @@ COPY website/ /var/www/html/
 
 RUN chown -R www-data:www-data /var/www/html
 
-RUN echo "DirectoryIndex index.php index.html" > /etc/apache2/conf-available/directory-index.conf
-RUN a2enconf directory-index
+RUN echo "DirectoryIndex index.php index.html" >> /etc/apache2/apache2.conf
 
 CMD ["apache2-foreground"]
