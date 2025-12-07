@@ -4,20 +4,12 @@ resource "aws_security_group" "sg_database" {
   description = "Security group for database"
   vpc_id      = aws_vpc.hr.id
 
-  # MySQL toegang alleen van specifieke IPs
+  # MySQL toegang alleen van specifieke IPs en webserver subnet
   ingress {
     from_port   = 3306
     to_port     = 3306
     protocol    = "tcp"
-    cidr_blocks = ["82.170.150.87/32", "145.93.76.108/32"]
-  }
-
-  # MySQL toegang van webserver subnet (IP range)
-  ingress {
-    from_port   = 3306
-    to_port     = 3306
-    protocol    = "tcp"
-    cidr_blocks = ["172.31.1.0/24"]  # subnet_web IP range
+    cidr_blocks = ["82.170.150.87/32", "145.93.76.108/32", "172.31.1.0/24"]
   }
 
   # Uitgaand verkeer
@@ -39,52 +31,28 @@ resource "aws_security_group" "sg_webserver" {
   description = "Security group for webserver"
   vpc_id      = aws_vpc.hr.id
 
-  # HTTP toegang alleen van load balancer
+  # HTTP toegang van overal (load balancer IPs komen hier)
   ingress {
-    from_port       = 80
-    to_port         = 80
-    protocol        = "tcp"
-    security_groups = [aws_security_group.sg_loadbalancer.id]
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
-  # HTTPS toegang alleen van load balancer
+  # HTTPS toegang van overal
   ingress {
-    from_port       = 443
-    to_port         = 443
-    protocol        = "tcp"
-    security_groups = [aws_security_group.sg_loadbalancer.id]
-  }
-
-  # HTTPS uitgaand voor ECR
-  egress {
     from_port   = 443
     to_port     = 443
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  # DNS uitgaand
+  # ALLE uitgaand verkeer toestaan
   egress {
-    from_port   = 53
-    to_port     = 53
-    protocol    = "tcp"
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  # UDP DNS
-  egress {
-    from_port   = 53
-    to_port     = 53
-    protocol    = "udp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  # MySQL uitgaand naar database (gebruik IP range)
-  egress {
-    from_port   = 3306
-    to_port     = 3306
-    protocol    = "tcp"
-    cidr_blocks = ["172.31.2.0/24", "172.31.3.0/24"]  # database subnets
   }
 
   tags = {
@@ -114,19 +82,12 @@ resource "aws_security_group" "sg_loadbalancer" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  # Uitgaand verkeer naar webserver
+  # ALLE uitgaand verkeer toestaan
   egress {
-    from_port       = 80
-    to_port         = 80
-    protocol        = "tcp"
-    security_groups = [aws_security_group.sg_webserver.id]
-  }
-
-  egress {
-    from_port       = 443
-    to_port         = 443
-    protocol        = "tcp"
-    security_groups = [aws_security_group.sg_webserver.id]
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   tags = {
