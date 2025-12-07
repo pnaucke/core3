@@ -20,9 +20,9 @@ resource "aws_db_instance" "hr_database" {
   # Database naam
   db_name = "innovatech"
   
-  # Credentials
+  # Credentials - nu met variable
   username = "admin"
-  password = "admin123!"
+  password = var.db_password
   
   # Network configuratie
   db_subnet_group_name   = aws_db_subnet_group.hr_db_subnet_group.name
@@ -39,33 +39,37 @@ resource "aws_db_instance" "hr_database" {
   }
 }
 
-# In database.tf, vervang de null_resource met:
+# Maak tabellen aan na creatie database
 resource "null_resource" "create_tables" {
   depends_on = [aws_db_instance.hr_database]
 
   provisioner "local-exec" {
     command = <<EOT
       sleep 30
-      mysql -h ${replace(aws_db_instance.hr_database.endpoint, ":3306", "")} -u admin -p'admin123!' -e "
-        CREATE DATABASE IF NOT EXISTS innovatech;
-        USE innovatech;
-        
-        CREATE TABLE IF NOT EXISTS users (
-          id INT(5) AUTO_INCREMENT PRIMARY KEY,
-          name VARCHAR(50),
-          email VARCHAR(50),
-          department VARCHAR(50),
-          status VARCHAR(50),
-          role VARCHAR(50)
-        );
-        
-        CREATE TABLE IF NOT EXISTS hr (
-          name VARCHAR(50),
-          password VARCHAR(50)
-        );
-        
-        INSERT INTO hr (name, password) VALUES ('admin', 'admin123');
-      "
+      mysql -h ${replace(aws_db_instance.hr_database.endpoint, ":3306", "")} \
+        -u admin \
+        -p'${var.db_password}' \
+        -e "
+          CREATE DATABASE IF NOT EXISTS innovatech;
+          USE innovatech;
+          
+          CREATE TABLE IF NOT EXISTS users (
+            id INT(5) AUTO_INCREMENT PRIMARY KEY,
+            name VARCHAR(50),
+            email VARCHAR(50),
+            department VARCHAR(50),
+            status VARCHAR(50),
+            role VARCHAR(50)
+          );
+          
+          CREATE TABLE IF NOT EXISTS hr (
+            name VARCHAR(50),
+            password VARCHAR(50)
+          );
+          
+          INSERT INTO hr (name, password) 
+          VALUES ('admin', '${var.hr_password}');
+        "
     EOT
   }
 }

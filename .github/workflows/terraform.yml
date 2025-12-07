@@ -32,4 +32,7 @@ jobs:
         run: terraform plan -out=tfplan -input=false
 
       - name: Terraform Apply
-        run: terraform apply -auto-approve tfplan
+        run: |
+          export TF_VAR_db_password="${{ secrets.DB_PASSWORD }}"
+          export TF_VAR_hr_password="${{ secrets.HR_PASSWORD }}"
+          terraform apply -auto-approve tfplan
