@@ -17,21 +17,15 @@ resource "aws_db_instance" "hr_database" {
   allocated_storage    = 20
   storage_type         = "gp2"
   
-  # Database naam
   db_name = "innovatech"
-  
-  # Credentials - nu met variable
   username = "admin"
   password = var.db_password
   
-  # Network configuratie
   db_subnet_group_name   = aws_db_subnet_group.hr_db_subnet_group.name
   vpc_security_group_ids = [aws_security_group.sg_database.id]
   
-  # Externe toegang
-  publicly_accessible    = true
+  publicly_accessible    = false  # <-- FALSE voor private database
   
-  # General
   skip_final_snapshot    = true
   
   tags = {
@@ -39,7 +33,7 @@ resource "aws_db_instance" "hr_database" {
   }
 }
 
-# Maak tabellen aan na creatie database
+# Null resource blijft hetzelfde
 resource "null_resource" "create_tables" {
   depends_on = [aws_db_instance.hr_database]
 

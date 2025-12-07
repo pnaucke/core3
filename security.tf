@@ -1,15 +1,15 @@
-# Security group voor database (extern toegankelijk)
+# Security group voor database
 resource "aws_security_group" "sg_database" {
-  name        = "database-sg"  # <- ANDERE NAAM, geen "sg-" prefix
+  name        = "database-sg"
   description = "Security group for database"
   vpc_id      = aws_vpc.hr.id
 
-  # MySQL toegang van buitenaf (vanaf elk IP)
+  # MySQL toegang alleen van specifieke IPs
   ingress {
     from_port   = 3306
     to_port     = 3306
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    cidr_blocks = ["82.170.150.87/32", "145.93.76.108/32"]
   }
 
   # Uitgaand verkeer
