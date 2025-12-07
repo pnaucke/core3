@@ -1,6 +1,6 @@
 # Security group voor database (extern toegankelijk)
 resource "aws_security_group" "sg_database" {
-  name        = "sg-database"
+  name        = "database-sg"  # <- ANDERE NAAM, geen "sg-" prefix
   description = "Security group for database"
   vpc_id      = aws_vpc.hr.id
 
