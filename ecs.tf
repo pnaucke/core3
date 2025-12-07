@@ -49,7 +49,7 @@ resource "aws_ecs_task_definition" "webserver" {
           value = "admin"
         },
         {
-          name  = "DB_PASS"  # <- Dit gebruiken voor PHP compatibiliteit
+          name  = "DB_PASS"
           value = var.db_password
         }
       ]
@@ -82,7 +82,7 @@ resource "aws_ecs_service" "webserver" {
   network_configuration {
     subnets          = [aws_subnet.subnet_web.id]
     security_groups  = [aws_security_group.sg_webserver.id]
-    assign_public_ip = false
+    assign_public_ip = true  # TRUE voor internet toegang
   }
 
   load_balancer {
@@ -117,7 +117,18 @@ resource "aws_iam_role_policy_attachment" "ecs_task_execution_role_policy" {
   policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy"
 }
 
+resource "aws_iam_role_policy_attachment" "ecr_policy" {
+  role       = aws_iam_role.ecs_task_execution_role.name
+  policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
+}
+
 # CloudWatch Logs groep
 resource "aws_cloudwatch_log_group" "ecs_logs" {
-  name = "/ecs/webserver"
+  name              = "/ecs/webserver"
+  retention_in_days = 7
+  skip_destroy      = true
+
+  tags = {
+    Name = "ecs-logs"
+  }
 }

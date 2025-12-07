@@ -55,12 +55,12 @@ resource "aws_subnet" "subnet_db2" {
   }
 }
 
-# Webserver subnet (PRIVATE) (tijdelijk public voor testen)
+# Webserver subnet (PUBLIC voor ECR pull)
 resource "aws_subnet" "subnet_web" {
   vpc_id                  = aws_vpc.hr.id
   cidr_block              = "172.31.1.0/24"
   availability_zone       = "eu-central-1a"
-  map_public_ip_on_launch = true  # Private
+  map_public_ip_on_launch = true  # TRUE voor internet toegang
 
   tags = {
     Name = "subnet_web"
@@ -72,7 +72,7 @@ resource "aws_subnet" "subnet_lb1" {
   vpc_id                  = aws_vpc.hr.id
   cidr_block              = "172.31.4.0/24"
   availability_zone       = "eu-central-1a"
-  map_public_ip_on_launch = true  # Public
+  map_public_ip_on_launch = true
 
   tags = {
     Name = "subnet_lb1"
@@ -83,7 +83,7 @@ resource "aws_subnet" "subnet_lb2" {
   vpc_id                  = aws_vpc.hr.id
   cidr_block              = "172.31.5.0/24"
   availability_zone       = "eu-central-1b"
-  map_public_ip_on_launch = true  # Public
+  map_public_ip_on_launch = true
 
   tags = {
     Name = "subnet_lb2"

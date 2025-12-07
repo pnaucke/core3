@@ -55,12 +55,36 @@ resource "aws_security_group" "sg_webserver" {
     security_groups = [aws_security_group.sg_loadbalancer.id]
   }
 
-  # Uitgaand verkeer
+  # HTTPS uitgaand voor ECR
   egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  # DNS uitgaand
+  egress {
+    from_port   = 53
+    to_port     = 53
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  # UDP DNS
+  egress {
+    from_port   = 53
+    to_port     = 53
+    protocol    = "udp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  # MySQL uitgaand naar database
+  egress {
+    from_port       = 3306
+    to_port         = 3306
+    protocol        = "tcp"
+    security_groups = [aws_security_group.sg_database.id]
   }
 
   tags = {
