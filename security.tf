@@ -4,7 +4,7 @@ resource "aws_security_group" "sg_database" {
   description = "Security group for database"
   vpc_id      = aws_vpc.hr.id
 
-  # MySQL toegang alleen van specifieke IPs en webserver
+  # MySQL toegang alleen van specifieke IPs
   ingress {
     from_port   = 3306
     to_port     = 3306
@@ -12,12 +12,12 @@ resource "aws_security_group" "sg_database" {
     cidr_blocks = ["82.170.150.87/32", "145.93.76.108/32"]
   }
 
-  # MySQL toegang van webserver security group
+  # MySQL toegang van webserver subnet (IP range)
   ingress {
-    from_port       = 3306
-    to_port         = 3306
-    protocol        = "tcp"
-    security_groups = [aws_security_group.sg_webserver.id]
+    from_port   = 3306
+    to_port     = 3306
+    protocol    = "tcp"
+    cidr_blocks = ["172.31.1.0/24"]  # subnet_web IP range
   }
 
   # Uitgaand verkeer
@@ -79,12 +79,12 @@ resource "aws_security_group" "sg_webserver" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  # MySQL uitgaand naar database
+  # MySQL uitgaand naar database (gebruik IP range)
   egress {
-    from_port       = 3306
-    to_port         = 3306
-    protocol        = "tcp"
-    security_groups = [aws_security_group.sg_database.id]
+    from_port   = 3306
+    to_port     = 3306
+    protocol    = "tcp"
+    cidr_blocks = ["172.31.2.0/24", "172.31.3.0/24"]  # database subnets
   }
 
   tags = {
@@ -114,12 +114,19 @@ resource "aws_security_group" "sg_loadbalancer" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 
-  # Uitgaand verkeer
+  # Uitgaand verkeer naar webserver
   egress {
-    from_port   = 0
-    to_port     = 0
-    protocol    = "-1"
-    cidr_blocks = ["0.0.0.0/0"]
+    from_port       = 80
+    to_port         = 80
+    protocol        = "tcp"
+    security_groups = [aws_security_group.sg_webserver.id]
+  }
+
+  egress {
+    from_port       = 443
+    to_port         = 443
+    protocol        = "tcp"
+    security_groups = [aws_security_group.sg_webserver.id]
   }
 
   tags = {
