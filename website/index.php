@@ -1,17 +1,11 @@
 <?php
 session_start();
 
-// Database config blijft voor andere pagina's
-$db_host = 'hr-database.cboq60ou0623.eu-central-1.rds.amazonaws.com';
-$db_name = 'innovatech';
-$db_user = 'admin';
-$db_pass = 'admin123';
-
-// HARCODED HR LOGIN (override database check)
-$valid_logins = [
-    'admin' => 'admin123',
-    // Voeg meer gebruikers toe indien nodig
-];
+// Database configuratie via environment variables
+$db_host = getenv('DB_HOST') ?: 'hr-database.cboq60ou0623.eu-central-1.rds.amazonaws.com';
+$db_name = getenv('DB_NAME') ?: 'innovatech';
+$db_user = getenv('DB_USER') ?: 'admin';
+$db_pass = getenv('DB_PASS') ?: ''; // DB_PASS ipv DB_PASSWORD
 
 $error = '';
 
@@ -19,14 +13,28 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $username = $_POST['username'];
     $password = $_POST['password'];
 
-    // Check tegen hardcoded logins
-    if (isset($valid_logins[$username]) && $valid_logins[$username] === $password) {
-        $_SESSION['loggedin'] = true;
-        $_SESSION['username'] = $username;
-        header("Location: home.php");
-        exit;
-    } else {
-        $error = 'Ongeldige gebruikersnaam of wachtwoord';
+    try {
+        $conn = new PDO("mysql:host=$db_host;dbname=$db_name;charset=utf8", $db_user, $db_pass);
+        $conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+
+        $stmt = $conn->prepare("SELECT * FROM hr WHERE name = ?");
+        $stmt->execute([$username]);
+        $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($user) {
+            if ($password === $user['password']) {
+                $_SESSION['loggedin'] = true;
+                $_SESSION['username'] = $user['name'];
+                header("Location: home.php");
+                exit;
+            } else {
+                $error = 'Ongeldig wachtwoord';
+            }
+        } else {
+            $error = 'Gebruiker niet gevonden';
+        }
+    } catch (PDOException $e) {
+        $error = 'Database fout: ' . $e->getMessage();
     }
 }
 ?>
@@ -61,10 +69,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         
         <p style="text-align: center; margin-top: 20px; color: #7f8c8d; font-size: 14px;">
             Log in met je HR-account gegevens
-        </p>
-        
-        <p style="text-align: center; margin-top: 10px; color: #95a5a6; font-size: 12px;">
-            Gebruiker: admin | Wachtwoord: admin123
         </p>
     </div>
 </body>

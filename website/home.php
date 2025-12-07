@@ -1,9 +1,10 @@
 <?php
-session_start();
-if (!isset($_SESSION['loggedin'])) {
-    header("Location: index.php");
-    exit;
-}
+// session_start();
+// if (!isset($_SESSION['loggedin'])) {
+//     header("Location: index.php");
+//     exit;
+// }
+
 
 // Database config
 $db_host = getenv('DB_HOST') ?: 'localhost';
