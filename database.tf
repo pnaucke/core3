@@ -39,13 +39,14 @@ resource "aws_db_instance" "hr_database" {
   }
 }
 
-# Tabbles
+# In database.tf, vervang de null_resource met:
 resource "null_resource" "create_tables" {
   depends_on = [aws_db_instance.hr_database]
 
   provisioner "local-exec" {
     command = <<EOT
-      mysql -h ${aws_db_instance.hr_database.endpoint} -u admin -p'admin123!' -e "
+      sleep 30
+      mysql -h ${replace(aws_db_instance.hr_database.endpoint, ":3306", "")} -u admin -p'admin123!' -e "
         CREATE DATABASE IF NOT EXISTS innovatech;
         USE innovatech;
         
