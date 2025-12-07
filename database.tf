@@ -17,9 +17,9 @@ resource "aws_db_instance" "hr_database" {
   allocated_storage    = 20
   storage_type         = "gp2"
   
-  # Credentials
+  # Credentials - rechtstreeks ingevuld voor test
   username = "admin"
-  password = "admin123!"
+  password = "admin123!"  # Hardcoded voor test
   
   # Network configuratie
   db_subnet_group_name   = aws_db_subnet_group.hr_db_subnet_group.name
