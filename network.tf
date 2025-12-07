@@ -32,12 +32,12 @@ resource "aws_default_route_table" "main" {
   }
 }
 
-# Database subnets - WEL public voor publieke RDS
+# Database subnets
 resource "aws_subnet" "subnet_db1" {
   vpc_id                  = aws_vpc.hr.id
   cidr_block              = "172.31.2.0/24"
   availability_zone       = "eu-central-1b"
-  map_public_ip_on_launch = true  # <-- TRUE voor publieke subnet
+  map_public_ip_on_launch = true
 
   tags = {
     Name = "subnet_db1"
@@ -48,9 +48,44 @@ resource "aws_subnet" "subnet_db2" {
   vpc_id                  = aws_vpc.hr.id
   cidr_block              = "172.31.3.0/24"
   availability_zone       = "eu-central-1c"
-  map_public_ip_on_launch = true  # <-- TRUE voor publieke subnet
+  map_public_ip_on_launch = true
 
   tags = {
     Name = "subnet_db2"
+  }
+}
+
+# Webserver subnet (PRIVATE)
+resource "aws_subnet" "subnet_web" {
+  vpc_id                  = aws_vpc.hr.id
+  cidr_block              = "172.31.1.0/24"
+  availability_zone       = "eu-central-1a"
+  map_public_ip_on_launch = false  # Private
+
+  tags = {
+    Name = "subnet_web"
+  }
+}
+
+# Load balancer subnets (PUBLIC)
+resource "aws_subnet" "subnet_lb1" {
+  vpc_id                  = aws_vpc.hr.id
+  cidr_block              = "172.31.4.0/24"
+  availability_zone       = "eu-central-1a"
+  map_public_ip_on_launch = true  # Public
+
+  tags = {
+    Name = "subnet_lb1"
+  }
+}
+
+resource "aws_subnet" "subnet_lb2" {
+  vpc_id                  = aws_vpc.hr.id
+  cidr_block              = "172.31.5.0/24"
+  availability_zone       = "eu-central-1b"
+  map_public_ip_on_launch = true  # Public
+
+  tags = {
+    Name = "subnet_lb2"
   }
 }
