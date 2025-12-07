@@ -25,6 +25,30 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
+      - name: Terraform Init
+        run: terraform init -input=false -upgrade
+
+      - name: Terraform Plan
+        run: terraform plan -out=tfplan -input=false -var="db_password=${{ secrets.DB_PASSWORD }}" -var="hr_password=${{ secrets.HR_PASSWORD }}"
+
+      - name: Terraform Apply (zonder ECS/ELB)
+        run: |
+          terraform apply -auto-approve \
+            -target=aws_ecr_repository.php_app \
+            -target=aws_db_instance.hr_database \
+            -target=null_resource.create_tables \
+            -target=aws_vpc.hr \
+            -target=aws_subnet.subnet_db1 \
+            -target=aws_subnet.subnet_db2 \
+            -target=aws_subnet.subnet_web \
+            -target=aws_subnet.subnet_lb1 \
+            -target=aws_subnet.subnet_lb2 \
+            -target=aws_security_group.sg_database \
+            -target=aws_security_group.sg_webserver \
+            -target=aws_security_group.sg_loadbalancer \
+            -var="db_password=${{ secrets.DB_PASSWORD }}" \
+            -var="hr_password=${{ secrets.HR_PASSWORD }}"
+
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
@@ -39,11 +63,5 @@ jobs:
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
 
-      - name: Terraform Init
-        run: terraform init -input=false -upgrade
-
-      - name: Terraform Plan
-        run: terraform plan -out=tfplan -input=false -var="db_password=${{ secrets.DB_PASSWORD }}" -var="hr_password=${{ secrets.HR_PASSWORD }}"
-
-      - name: Terraform Apply
+      - name: Terraform Apply (rest - ECS en ELB)
         run: terraform apply -auto-approve -var="db_password=${{ secrets.DB_PASSWORD }}" -var="hr_password=${{ secrets.HR_PASSWORD }}"
