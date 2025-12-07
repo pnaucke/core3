@@ -55,12 +55,12 @@ resource "aws_subnet" "subnet_db2" {
   }
 }
 
-# Webserver subnet (PRIVATE)
+# Webserver subnet (PRIVATE) (tijdelijk public voor testen)
 resource "aws_subnet" "subnet_web" {
   vpc_id                  = aws_vpc.hr.id
   cidr_block              = "172.31.1.0/24"
   availability_zone       = "eu-central-1a"
-  map_public_ip_on_launch = false  # Private
+  map_public_ip_on_launch = true  # Private
 
   tags = {
     Name = "subnet_web"
