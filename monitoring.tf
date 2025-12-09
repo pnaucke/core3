@@ -6,16 +6,16 @@ resource "aws_cloudwatch_dashboard" "webserver_dashboard" {
     widgets = [
       {
         type = "metric",
-        width = 24,
+        width = 12,
         height = 6,
         properties = {
           metrics = [
-            ["AWS/ECS", "CPUUtilization", "ServiceName", "webserver", "ClusterName", "web-cluster", { stat = "Average" }]
+            ["AWS/ECS", "CPUUtilization", "ServiceName", "webserver", "ClusterName", "web-cluster", { stat = "Average", label = "CPU %" }]
           ],
           period = 60,
           stat = "Average",
           region = "eu-central-1",
-          title = "WebServer CPU Utilization (%)",
+          title = "CPU Utilization",
           view = "singleValue",
           stacked = false,
           setPeriodToTimeRange = false,
@@ -23,56 +23,9 @@ resource "aws_cloudwatch_dashboard" "webserver_dashboard" {
             left = {
               min = 0,
               max = 100,
-              showUnits = false,
-              label = "Percentage"
-            }
-          },
-          annotations = {
-            horizontal = [
-              {
-                color = "#d62728",
-                label = "Critical (80%)",
-                value = 80
-              },
-              {
-                color = "#ff7f0e",
-                label = "Warning (70%)",
-                value = 70
-              }
-            ]
-          }
-        }
-      },
-      {
-        type = "metric",
-        width = 24,
-        height = 8,
-        properties = {
-          metrics = [
-            ["AWS/ECS", "CPUUtilization", "ServiceName", "webserver", "ClusterName", "web-cluster", { stat = "Average", period = 60, label = "CPU Utilization %" }]
-          ],
-          view = "timeSeries",
-          stacked = false,
-          region = "eu-central-1",
-          period = 60,
-          stat = "Average",
-          title = "WebServer CPU Utilization Over Time",
-          yAxis = {
-            left = {
-              min = 0,
-              max = 100,
-              label = "Percentage",
               showUnits = false
             }
           }
-        }
-      },
-      {
-        type = "text",
-        width = 24,
-        height = 2,
-        properties = {
-          markdown = "# 📊 ECS WebServer Monitoring\n\n## Real-time CPU Utilization Metrics"
         }
       },
       {
@@ -83,56 +36,42 @@ resource "aws_cloudwatch_dashboard" "webserver_dashboard" {
           metrics = [
             ["AWS/ECS", "MemoryUtilization", "ServiceName", "webserver", "ClusterName", "web-cluster", { stat = "Average", label = "Memory %" }]
           ],
-          view = "gauge",
-          stacked = false,
-          region = "eu-central-1",
           period = 60,
           stat = "Average",
+          region = "eu-central-1",
           title = "Memory Utilization",
+          view = "singleValue",
+          stacked = false,
+          setPeriodToTimeRange = false,
           yAxis = {
             left = {
               min = 0,
-              max = 100
+              max = 100,
+              showUnits = false
             }
-          },
-          annotations = {
-            horizontal = [
-              {
-                color = "#ff7f0e",
-                label = "Warning",
-                value = 70
-              },
-              {
-                color = "#d62728",
-                label = "Critical",
-                value = 85
-              }
-            ]
           }
         }
       },
       {
         type = "metric",
-        width = 12,
-        height = 6,
+        width = 24,
+        height = 8,
         properties = {
           metrics = [
-            ["AWS/ECS", "RunningTaskCount", "ServiceName", "webserver", "ClusterName", "web-cluster", { stat = "Maximum", label = "Running Tasks" }]
+            ["AWS/ECS", "CPUUtilization", "ServiceName", "webserver", "ClusterName", "web-cluster", { stat = "Average", label = "CPU Utilization" }]
           ],
-          view = "singleValue",
+          view = "timeSeries",
           stacked = false,
           region = "eu-central-1",
           period = 60,
-          stat = "Maximum",
-          title = "Running Tasks",
-          annotations = {
-            horizontal = [
-              {
-                color = "#2ca02c",
-                label = "Healthy",
-                value = 1
-              }
-            ]
+          stat = "Average",
+          title = "CPU Utilization Over Time (0-100%)",
+          yAxis = {
+            left = {
+              min = 0,
+              max = 100,
+              showUnits = false
+            }
           }
         }
       }
