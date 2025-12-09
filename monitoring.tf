@@ -26,6 +26,20 @@ resource "aws_cloudwatch_dashboard" "webserver_dashboard" {
               showUnits = false,
               label = "Percentage"
             }
+          },
+          annotations = {
+            horizontal = [
+              {
+                color = "#d62728",
+                label = "Critical (80%)",
+                value = 80
+              },
+              {
+                color = "#ff7f0e",
+                label = "Warning (70%)",
+                value = 70
+              }
+            ]
           }
         }
       },
@@ -35,7 +49,7 @@ resource "aws_cloudwatch_dashboard" "webserver_dashboard" {
         height = 8,
         properties = {
           metrics = [
-            ["AWS/ECS", "CPUUtilization", "ServiceName", "webserver", "ClusterName", "web-cluster", { stat = "Average", period = 60, label = "CPU %" }]
+            ["AWS/ECS", "CPUUtilization", "ServiceName", "webserver", "ClusterName", "web-cluster", { stat = "Average", period = 60, label = "CPU Utilization %" }]
           ],
           view = "timeSeries",
           stacked = false,
@@ -80,6 +94,20 @@ resource "aws_cloudwatch_dashboard" "webserver_dashboard" {
               min = 0,
               max = 100
             }
+          },
+          annotations = {
+            horizontal = [
+              {
+                color = "#ff7f0e",
+                label = "Warning",
+                value = 70
+              },
+              {
+                color = "#d62728",
+                label = "Critical",
+                value = 85
+              }
+            ]
           }
         }
       },
@@ -89,7 +117,7 @@ resource "aws_cloudwatch_dashboard" "webserver_dashboard" {
         height = 6,
         properties = {
           metrics = [
-            [".", "RunningTaskCount", ".", ".", ".", ".", { stat = "Maximum", label = "Running Tasks" }]
+            ["AWS/ECS", "RunningTaskCount", "ServiceName", "webserver", "ClusterName", "web-cluster", { stat = "Maximum", label = "Running Tasks" }]
           ],
           view = "singleValue",
           stacked = false,
