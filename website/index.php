@@ -1,11 +1,10 @@
 <?php
 session_start();
 
-// Database configuratie via environment variables
 $db_host = getenv('DB_HOST') ?: 'hr-database.cboq60ou0623.eu-central-1.rds.amazonaws.com';
 $db_name = getenv('DB_NAME') ?: 'innovatech';
 $db_user = getenv('DB_USER') ?: 'admin';
-$db_pass = getenv('DB_PASS') ?: ''; // DB_PASS ipv DB_PASSWORD
+$db_pass = getenv('DB_PASS') ?: '';
 
 $error = '';
 

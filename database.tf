@@ -24,7 +24,7 @@ resource "aws_db_instance" "hr_database" {
   db_subnet_group_name   = aws_db_subnet_group.hr_db_subnet_group.name
   vpc_security_group_ids = [aws_security_group.sg_database.id]
   
-  publicly_accessible    = true  # <-- TRUE voor publieke toegang (tijdelijk)
+  publicly_accessible    = false
   
   skip_final_snapshot    = true
   
@@ -33,7 +33,7 @@ resource "aws_db_instance" "hr_database" {
   }
 }
 
-# Maak tabellen aan na creatie database
+# tables
 resource "null_resource" "create_tables" {
   depends_on = [aws_db_instance.hr_database]
 

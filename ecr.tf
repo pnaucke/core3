@@ -1,4 +1,3 @@
-# ECR Repository voor PHP app
 resource "aws_ecr_repository" "php_app" {
   name = "php-app"
 }
