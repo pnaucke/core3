@@ -1,6 +1,6 @@
 # Application Load Balancer
 resource "aws_lb" "web_lb" {
-  name               = "web-lb"
+  name               = "web-lb-innovatech"
   internal           = false
   load_balancer_type = "application"
   security_groups    = [aws_security_group.sg_loadbalancer.id]
@@ -9,7 +9,7 @@ resource "aws_lb" "web_lb" {
   enable_deletion_protection = false
 
   tags = {
-    Name = "web-lb"
+    Name = "web-lb-innovatech"
   }
 }
 
@@ -37,7 +37,7 @@ resource "aws_lb_target_group" "webserver" {
   }
 }
 
-# HTTPS Listener (poort 443) - Wacht op certificaat validatie
+# HTTPS Listener (poort 443)
 resource "aws_lb_listener" "https" {
   load_balancer_arn = aws_lb.web_lb.arn
   port              = 443
@@ -50,7 +50,6 @@ resource "aws_lb_listener" "https" {
     target_group_arn = aws_lb_target_group.webserver.arn
   }
 
-  # Wacht tot certificaat gevalideerd is
   depends_on = [aws_acm_certificate.ssl_cert]
 }
 
@@ -69,4 +68,16 @@ resource "aws_lb_listener" "http" {
       status_code = "HTTP_301"
     }
   }
+}
+
+# Outputs
+output "website_urls" {
+  value = <<-EOT
+  ============ WEBSITE URLS ============
+  HTTP:  http://innovatech-hr.tk (redirect naar HTTPS)
+  HTTPS: https://innovatech-hr.tk
+  
+  LOAD BALANCER DNS: ${aws_lb.web_lb.dns_name}
+  ======================================
+  EOT
 }
