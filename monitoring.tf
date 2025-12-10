@@ -1,9 +1,11 @@
-# CloudWatch Dashboard for ECS monitoring
-resource "aws_cloudwatch_dashboard" "webserver_dashboard" {
-  dashboard_name = "WebServer-Monitoring"
+# monitoring.tf - Gecombineerd dashboard voor Health, Performance & Cost
+
+resource "aws_cloudwatch_dashboard" "main_dashboard" {
+  dashboard_name = "Innovatech-Dashboard"
   
   dashboard_body = jsonencode({
     widgets = [
+      # ======================= HEALTH & PERFORMANCE =======================
       {
         type = "metric",
         width = 12,
@@ -15,19 +17,16 @@ resource "aws_cloudwatch_dashboard" "webserver_dashboard" {
           period = 60,
           stat = "Average",
           region = "eu-central-1",
-          title = "CPU Utilization",
+          title = "🖥️ WebServer CPU",
           view = "singleValue",
           stacked = false,
           setPeriodToTimeRange = false,
           yAxis = {
-            left = {
-              min = 0,
-              max = 100,
-              showUnits = false
-            }
+            left = { min = 0, max = 100, showUnits = false }
           }
         }
       },
+      
       {
         type = "metric",
         width = 12,
@@ -39,19 +38,16 @@ resource "aws_cloudwatch_dashboard" "webserver_dashboard" {
           period = 60,
           stat = "Average",
           region = "eu-central-1",
-          title = "Memory Utilization",
+          title = "🧠 WebServer Memory",
           view = "singleValue",
           stacked = false,
           setPeriodToTimeRange = false,
           yAxis = {
-            left = {
-              min = 0,
-              max = 100,
-              showUnits = false
-            }
+            left = { min = 0, max = 100, showUnits = false }
           }
         }
       },
+      
       {
         type = "metric",
         width = 24,
@@ -65,14 +61,100 @@ resource "aws_cloudwatch_dashboard" "webserver_dashboard" {
           region = "eu-central-1",
           period = 60,
           stat = "Average",
-          title = "CPU Utilization Over Time (0-100%)",
+          title = "📈 CPU Utilization Over Time (0-100%)",
           yAxis = {
-            left = {
-              min = 0,
-              max = 100,
-              showUnits = false
-            }
+            left = { min = 0, max = 100, showUnits = false }
           }
+        }
+      },
+      
+      # ======================= COST MANAGEMENT =======================
+      {
+        type = "text",
+        width = 24,
+        height = 2,
+        properties = {
+          markdown = "# 💰 Cost Management Dashboard\nREQ-NCA-P3-12/13/14: Health, Performance & Cost Monitoring"
+        }
+      },
+      
+      {
+        type = "metric",
+        width = 12,
+        height = 6,
+        properties = {
+          metrics = [
+            ["AWS/RDS", "CPUUtilization", "DBInstanceIdentifier", "hr-database", { "label": "Database CPU %" }],
+            ["AWS/RDS", "FreeStorageSpace", "DBInstanceIdentifier", "hr-database", { "label": "Free Storage (MB)", "yAxis": "right" }],
+            ["AWS/RDS", "DatabaseConnections", "DBInstanceIdentifier", "hr-database", { "label": "Active Connections", "yAxis": "right" }]
+          ],
+          view = "timeSeries",
+          stacked = false,
+          region = "eu-central-1",
+          stat = "Average",
+          period = 300,
+          title = "📊 Database Usage (Impacts Cost)",
+          yAxis = {
+            left = { min = 0, max = 100, label = "CPU %" },
+            right = { label = "MB / Connections" }
+          }
+        }
+      },
+      
+      {
+        type = "metric",
+        width = 12,
+        height = 6,
+        properties = {
+          metrics = [
+            ["AWS/RDS", "NetworkTransmitThroughput", "DBInstanceIdentifier", "hr-database", { "label": "DB Out (KB/s)" }],
+            ["AWS/RDS", "NetworkReceiveThroughput", "DBInstanceIdentifier", "hr-database", { "label": "DB In (KB/s)", "yAxis": "right" }]
+          ],
+          view = "timeSeries",
+          stacked = false,
+          region = "eu-central-1",
+          stat = "Average",
+          period = 300,
+          title = "📡 Data Transfer (Network Costs)",
+          yAxis = {
+            left = { label = "Out KB/s" },
+            right = { label = "In KB/s" }
+          }
+        }
+      },
+      
+      {
+        type = "metric",
+        width = 12,
+        height = 6,
+        properties = {
+          metrics = [
+            ["AWS/ApplicationELB", "RequestCount", "LoadBalancer", "web-lb-innovatech", { "label": "Requests/min", "stat": "Sum", "period": 60 }]
+          ],
+          view = "timeSeries",
+          stacked = false,
+          region = "eu-central-1",
+          stat = "Sum",
+          period = 60,
+          title = "⚡ Load Balancer Requests"
+        }
+      },
+      
+      {
+        type = "text",
+        width = 12,
+        height = 6,
+        properties = {
+          markdown = "## 💡 Cost Optimization Tips\n\n**Storage:**\n- Monitor FreeStorageSpace\n- Clean old logs regularly\n\n**Database:**\n- Keep CPU < 70%\n- Limit connections\n\n**Network:**\n- Reduce data transfer\n- Use compression"
+        }
+      },
+      
+      {
+        type = "text",
+        width = 24,
+        height = 4,
+        properties = {
+          markdown = "## 🔗 AWS Cost Tools\n\n- **AWS Cost Explorer**: Detailed cost analysis\n- **AWS Budgets**: Set cost alerts\n- **Cost Allocation Tags**: Use tags: `Environment=production`, `ManagedBy=Terraform`\n- **Trusted Advisor**: Cost optimization checks"
         }
       }
     ]

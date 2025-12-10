@@ -52,12 +52,9 @@ resource "aws_db_instance" "hr_database" {
   publicly_accessible    = false
   skip_final_snapshot    = true
   
-  # 👇 LOGGING CONFIGURATIE 👇
+  # 👇 LOGGING CONFIGURATIE (ZONDER monitoring_role_arn) 👇
   enabled_cloudwatch_logs_exports = ["general", "slowquery"]
   parameter_group_name = aws_db_parameter_group.hr_db_params.name
-  monitoring_role_arn = aws_iam_role.rds_cloudwatch_role.arn
-
-    monitoring_interval = 60
   
   tags = {
     Name = "hr-database"
