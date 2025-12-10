@@ -8,6 +8,31 @@ resource "aws_db_subnet_group" "hr_db_subnet_group" {
   }
 }
 
+# RDS Parameter Group voor logging
+resource "aws_db_parameter_group" "hr_db_params" {
+  name   = "hr-db-general-log-params"
+  family = "mysql8.0"
+
+  parameter {
+    name  = "general_log"
+    value = "1"  # Zet general log aan
+  }
+
+  parameter {
+    name  = "slow_query_log"
+    value = "1"  # Zet slow query log aan
+  }
+
+  parameter {
+    name  = "log_output"
+    value = "FILE"  # Log naar bestand (nodig voor CloudWatch)
+  }
+
+  tags = {
+    Name = "hr-db-params"
+  }
+}
+
 # RDS MySQL database
 resource "aws_db_instance" "hr_database" {
   identifier           = "hr-database"
@@ -25,10 +50,11 @@ resource "aws_db_instance" "hr_database" {
   vpc_security_group_ids = [aws_security_group.sg_database.id]
   
   publicly_accessible    = false
-  
   skip_final_snapshot    = true
   
+  # 👇 LOGGING CONFIGURATIE 👇
   enabled_cloudwatch_logs_exports = ["general", "slowquery"]
+  parameter_group_name = aws_db_parameter_group.hr_db_params.name
   
   tags = {
     Name = "hr-database"
