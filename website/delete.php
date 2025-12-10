@@ -25,8 +25,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $user = $checkStmt->fetch();
 
         if ($user) {
+            if ($user['role'] === 'HR') {
+                $hrStmt = $conn->prepare("DELETE FROM hr WHERE name = ?");
+                $hrStmt->execute([$user['name']]);
+            }
+            
             $stmt = $conn->prepare("DELETE FROM users WHERE id = ?");
             $stmt->execute([$id]);
+            
             $message = "User #$id successfully deleted!";
             $message_class = "success";
         } else {
@@ -75,12 +81,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         <p style="text-align: center; margin-top: 20px;">
             <a href="users.php" style="color: #3498db;">← View all users first</a>
         </p>
-        
-        <div style="background-color: #f8f9fa; padding: 15px; border-radius: 6px; margin-top: 20px;">
-            <p style="color: #666; font-size: 14px;">
-                <strong>Note:</strong> Enter the User ID from the users list. This action cannot be undone.
-            </p>
-        </div>
     </div>
 </body>
 </html>

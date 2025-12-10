@@ -207,3 +207,9 @@ form input[type="submit"]:hover {
     background-color: #e8f5e8;
     color: #388e3c;
 }
+
+.role-hr {
+    background-color: #fff3e0;
+    color: #ef6c00;
+    border: 1px solid #ffcc80;
+}

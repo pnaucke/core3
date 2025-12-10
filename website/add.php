@@ -19,6 +19,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     $department = $_POST['department'];
     $status = $_POST['status'];
     $role = $_POST['role'];
+    $hr_password = $_POST['hr_password'] ?? '';
 
     try {
         $conn = new PDO("mysql:host=$db_host;dbname=$db_name", $db_user, $db_pass);
@@ -27,7 +28,14 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $stmt = $conn->prepare("INSERT INTO users (name, email, department, status, role) VALUES (?, ?, ?, ?, ?)");
         $stmt->execute([$name, $email, $department, $status, $role]);
         
-        $message = "User successfully added!";
+        if ($role === 'HR' && !empty($hr_password)) {
+            $stmt_hr = $conn->prepare("INSERT INTO hr (name, password) VALUES (?, ?)");
+            $stmt_hr->execute([$name, $hr_password]);
+            $message = "User successfully added! HR account created.";
+        } else {
+            $message = "User successfully added!";
+        }
+        
         $message_class = "success";
     } catch (Exception $e) {
         $message = "Error: " . $e->getMessage();
@@ -80,12 +88,18 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             </select>
             
             <label>Role</label>
-            <select name="role" required>
+            <select name="role" required id="roleSelect">
                 <option value="">Select role</option>
                 <option value="Manager">Manager</option>
                 <option value="Accountant">Accountant</option>
                 <option value="Cleaner">Cleaner</option>
+                <option value="HR">HR</option>
             </select>
+            
+            <div id="hrPasswordField" style="display: none;">
+                <label>HR Login Password (required for HR users)</label>
+                <input type="password" name="hr_password" placeholder="Enter password for HR login">
+            </div>
             
             <input type="submit" value="Add User">
         </form>
@@ -93,6 +107,17 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         <p style="text-align: center; margin-top: 20px;">
             <a href="users.php" style="color: #3498db;">← Back to Users List</a>
         </p>
+        
+        <script>
+            document.getElementById('roleSelect').addEventListener('change', function() {
+                var hrPasswordField = document.getElementById('hrPasswordField');
+                if (this.value === 'HR') {
+                    hrPasswordField.style.display = 'block';
+                } else {
+                    hrPasswordField.style.display = 'none';
+                }
+            });
+        </script>
     </div>
 </body>
 </html>
