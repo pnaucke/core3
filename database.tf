@@ -28,6 +28,8 @@ resource "aws_db_instance" "hr_database" {
   
   skip_final_snapshot    = true
   
+  enabled_cloudwatch_logs_exports = ["general", "slowquery"]
+  
   tags = {
     Name = "hr-database"
   }
