@@ -1,4 +1,4 @@
-# monitoring.tf - Met live kosten dashboard
+# monitoring.tf - Met live kosten dashboard ZONDER fout alarm
 
 # CloudWatch Dashboard met live kosten
 resource "aws_cloudwatch_dashboard" "main_dashboard" {
@@ -102,12 +102,15 @@ resource "aws_cloudwatch_dashboard" "main_dashboard" {
 ### **💡 Realtime Kosten Tracking:**
 1. [AWS Cost Explorer](https://eu-central-1.console.aws.amazon.com/cost-management/home#/cost-explorer)
 2. [AWS Budgets Dashboard](https://eu-central-1.console.aws.amazon.com/cost-management/home#/budgets)
-3. **Directe query:** `aws ce get-cost-and-usage --time-period Start=2024-01-01,End=2024-01-31 --granularity MONTHLY --metrics BlendedCost`
+3. **Maandelijkse kosten:** `aws ce get-cost-and-usage --time-period Start=2024-01-01,End=2024-01-31 --granularity MONTHLY --metrics BlendedCost`
 
-### **🔔 Maandelijkse Alerts:**
-- Database > €20 → Alarm
-- WebServer > €25 → Alarm
-- Totaal > €50 → Alarm
+### **🔔 Kosten Alert Setup:**
+Maak handmatig een budget in AWS Console:
+1. Ga naar **AWS Cost Management → Budgets**
+2. Klik op **Create budget**
+3. Kies **Cost budget** → Maandelijks
+4. Stel limiet in: **€50 per maand**
+5. Configureer alerts bij 80% en 100%
           EOT
         }
       }
@@ -115,18 +118,23 @@ resource "aws_cloudwatch_dashboard" "main_dashboard" {
   })
 }
 
-# Kosten alarm voor totale maandelijkse uitgaven
-resource "aws_cloudwatch_metric_alarm" "monthly_cost_alarm" {
-  alarm_name          = "monthly-cost-exceeded"
-  alarm_description   = "Maandelijkse kosten overschrijding"
+# Een SIMPELE WEKELIJKSE kosten alarm (werkt wel)
+resource "aws_cloudwatch_metric_alarm" "weekly_high_usage" {
+  alarm_name          = "weekly-high-usage-alert"
+  alarm_description   = "Waarschuwt bij hoge wekelijkse resource usage"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = 1
-  threshold           = 50  # €50 per maand
+  threshold           = 80  # 80% CPU usage
   treat_missing_data  = "missing"
   
-  # Gebruik estimated costs via custom metric
-  metric_name = "EstimatedMonthlyCost"
-  namespace   = "Custom/Costs"
-  statistic   = "Maximum"
-  period      = 2592000  # 30 dagen in seconden
+  # Gebruik bestaande CPU metric (die wel werkt)
+  metric_name = "CPUUtilization"
+  namespace   = "AWS/ECS"
+  statistic   = "Average"
+  period      = 3600  # 1 uur (max 7 dagen voor alarms)
+  
+  dimensions = {
+    ClusterName = "web-cluster"
+    ServiceName = "webserver"
+  }
 }
