@@ -80,7 +80,7 @@ resource "aws_ecs_service" "webserver" {
   launch_type     = "FARGATE"
 
   network_configuration {
-    subnets          = [aws_subnet.subnet_web.id]
+    subnets = [aws_subnet.subnet_web1.id, aws_subnet.subnet_web2.id]
     security_groups  = [aws_security_group.sg_webserver.id]
     assign_public_ip = true  # TRUE voor internet toegang
   }

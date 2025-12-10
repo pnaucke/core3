@@ -56,15 +56,23 @@ resource "aws_subnet" "subnet_db2" {
 }
 
 # Webserver subnet (PRIVATE)
-resource "aws_subnet" "subnet_web" {
+resource "aws_subnet" "subnet_web1" {
   vpc_id                  = aws_vpc.hr.id
   cidr_block              = "172.31.1.0/24"
   availability_zone       = "eu-central-1a"
   map_public_ip_on_launch = false
 
   tags = {
-    Name = "subnet_web"
+    Name = "subnet_web1"
   }
+}
+
+resource "aws_subnet" "subnet_web2" {
+  vpc_id            = aws_vpc.hr.id
+  cidr_block        = "172.31.7.0/24"
+  availability_zone = "eu-central-1b"
+  map_public_ip_on_launch = false
+  tags = { Name = "subnet_web2" }
 }
 
 # Load balancer subnets (PUBLIC)
