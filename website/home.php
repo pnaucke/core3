@@ -25,6 +25,7 @@ $db_pass = getenv('DB_PASS') ?: '';
         <a href="delete.php">Delete User</a> |
         <a href="users.php">Users</a> |
         <a href="logout.php">Logout</a>
+        <a href="app-logger.php">Live Log Test</a>
     </nav>
     
     <div class="container">
