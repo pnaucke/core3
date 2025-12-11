@@ -1,4 +1,4 @@
-# 1. IAM Role voor AWS Backup (met uitgebreide rechten)
+# 1. IAM Role voor AWS Backup (ZONDER inline_policy)
 resource "aws_iam_role" "backup_role" {
   name = "aws-backup-service-role"
 
@@ -12,32 +12,43 @@ resource "aws_iam_role" "backup_role" {
       }
     ]
   })
-
-  inline_policy {
-    name = "backup-full-permissions"
-    policy = jsonencode({
-      Version = "2012-10-17"
-      Statement = [
-        {
-          Effect   = "Allow"
-          Action   = ["backup:*", "backup-storage:*"]
-          Resource = "*"
-        },
-        {
-          Effect   = "Allow"
-          Action   = [
-            "kms:DescribeKey", "kms:GenerateDataKey*",
-            "kms:Decrypt", "kms:Encrypt", "kms:ReEncrypt*",
-            "kms:CreateGrant", "kms:RetireGrant"
-          ]
-          Resource = "*"
-        }
-      ]
-    })
-  }
 }
 
-# 2. Backup Vault (opslaglocatie)
+# 2. AWS Managed Policy attachment
+resource "aws_iam_role_policy_attachment" "backup_policy" {
+  role       = aws_iam_role.backup_role.name
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSBackupServiceRolePolicyForBackup"
+}
+
+# 3. EXTRA Inline Policy voor backup vault creatie (nieuwe syntax)
+resource "aws_iam_role_policy" "backup_vault_creation" {
+  name = "backup-vault-creation-permissions"
+  role = aws_iam_role.backup_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "backup-storage:MountBackupVault",
+          "backup-storage:DeleteBackupVault",
+          "backup-storage:DescribeBackupVault",
+          "backup:TagResource",
+          "kms:DescribeKey",
+          "kms:GenerateDataKey*",
+          "kms:Decrypt",
+          "kms:Encrypt",
+          "kms:CreateGrant",
+          "kms:RetireGrant"
+        ]
+        Resource = "*"
+      }
+    ]
+  })
+}
+
+# 4. Backup Vault (opslaglocatie)
 resource "aws_backup_vault" "rds_backup_vault" {
   name = "rds-daily-backup-vault"
   tags = {
@@ -46,7 +57,7 @@ resource "aws_backup_vault" "rds_backup_vault" {
   }
 }
 
-# 3. Backup Plan (schema: dagelijks om 05:00, retentie 7 dagen)
+# 5. Backup Plan (schema: dagelijks om 05:00, retentie 7 dagen)
 resource "aws_backup_plan" "daily_backup" {
   name = "rds-daily-backup-plan"
 
@@ -63,7 +74,7 @@ resource "aws_backup_plan" "daily_backup" {
   }
 }
 
-# 4. Koppel alleen de RDS database aan het plan
+# 6. Koppel alleen de RDS database aan het plan
 resource "aws_backup_selection" "rds_selection" {
   name         = "rds-backup-selection"
   plan_id      = aws_backup_plan.daily_backup.id
@@ -71,7 +82,7 @@ resource "aws_backup_selection" "rds_selection" {
   resources    = [aws_db_instance.hr_database.arn]
 }
 
-# 5. Loggroep voor backup logs
+# 7. Loggroep voor backup logs
 resource "aws_cloudwatch_log_group" "backup_logs" {
   name              = "/aws/backup/rds-backup"
   retention_in_days = 30
@@ -82,7 +93,7 @@ resource "aws_cloudwatch_log_group" "backup_logs" {
   }
 }
 
-# 6. Metric Filters om SUCCEEDED/FAILED berichten in logs te tellen
+# 8. Metric Filters om SUCCEEDED/FAILED berichten in logs te tellen
 resource "aws_cloudwatch_log_metric_filter" "successful_backup" {
   name           = "successful-backup-count"
   pattern        = "SUCCEEDED"
@@ -105,7 +116,7 @@ resource "aws_cloudwatch_log_metric_filter" "failed_backup" {
   }
 }
 
-# 7. CloudWatch Alarm dat afgaat bij een mislukte backup
+# 9. CloudWatch Alarm dat afgaat bij een mislukte backup
 resource "aws_cloudwatch_metric_alarm" "failed_backup_alarm" {
   alarm_name          = "failed-backup-alarm"
   alarm_description   = "Waarschuwt bij een gefaalde RDS backup"
