@@ -54,14 +54,17 @@ resource "aws_cloudwatch_dashboard" "main_dashboard" {
         height = 6
         properties = {
           metrics = [
-            ["AWS/RDS", "DatabaseConnections", "DBInstanceIdentifier", "hr-database", { stat = "Average", label = "Database Connecties" }]
+            ["AWS/RDS", "CPUUtilization", "DBInstanceIdentifier", "hr-database", { stat = "Average", label = "Database CPU" }]
           ]
           period = 60
           stat = "Average"
           region = "eu-central-1"
-          title = "Database Status (Connecties)"
+          title = "Database Status (CPU = Uptime)"
           view = "singleValue"
           stacked = false
+          yAxis = {
+            left = { min = 0, max = 100 }
+          }
         }
       },
       
@@ -109,16 +112,16 @@ resource "aws_cloudwatch_metric_alarm" "high_cpu_alarm" {
   ok_actions    = []
 }
 
-# Alarm voor database downtime - Kijkt naar ontbrekende metrics (database niet running)
+# Alarm voor database downtime - Detecteert wanneer CPU metric verdwijnt (database down)
 resource "aws_cloudwatch_metric_alarm" "database_downtime_alarm" {
   alarm_name          = "database-downtime-alarm"
-  alarm_description   = "Waarschuwt bij database downtime (geen metrics = database niet running)"
+  alarm_description   = "Waarschuwt bij database downtime (geen CPU metrics = database niet running)"
   comparison_operator = "LessThanThreshold"
   evaluation_periods  = 1
-  threshold           = 0.1  # Als er minder dan 0.1 connecties zijn (bijna 0)
-  period              = 60   # 60 seconden = 1 minuut
+  threshold           = 0.01  # Zelfs als CPU 0% is maar metric bestaat, dan is database up
+  period              = 60    # 60 seconden = 1 minuut
   
-  metric_name = "DatabaseConnections"
+  metric_name = "CPUUtilization"
   namespace   = "AWS/RDS"
   statistic   = "Average"
   
@@ -126,7 +129,7 @@ resource "aws_cloudwatch_metric_alarm" "database_downtime_alarm" {
     DBInstanceIdentifier = "hr-database"
   }
   
-  # BELANGRIJK: Behandel ontbrekende data als "slecht" (database down)
+  # BELANGRIJK: Als er geen CPU data is (missing), dan is database down
   treat_missing_data = "breaching"
   
   alarm_actions = []
