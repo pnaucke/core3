@@ -55,16 +55,7 @@ resource "aws_cloudwatch_dashboard" "main_dashboard" {
         properties = {
           region = "eu-central-1"
           title = "RDS Backup Status (Afgelopen 7 dagen)"
-          # 🔧 Aangepaste query: Controleert eerst of er logs zijn
-          query = <<-EOT
-            SOURCE '/aws/backup/rds-backup' 
-            | stats count(*) as logCount
-            | filter logCount > 0
-            | SOURCE '/aws/backup/rds-backup' 
-            | stats count(*) by bin(1d), @message
-            | sort @timestamp desc
-            | limit 7
-          EOT
+          query = "SOURCE '/aws/backup/rds-backup' | stats count(*) by bin(1d), @message | sort @timestamp desc | limit 7"
           view = "table"
         }
       },
