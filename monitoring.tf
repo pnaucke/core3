@@ -124,7 +124,7 @@ resource "aws_cloudwatch_metric_alarm" "high_cpu_alarm" {
   ok_actions    = [aws_sns_topic.alarms.arn]
 }
 
-# Alarm voor database downtime
+# Alarm voor database downtime (in monitoring.tf)
 resource "aws_cloudwatch_metric_alarm" "database_downtime_alarm" {
   alarm_name          = "database-downtime-alarm"
   alarm_description   = "Database is down (geen CPU metrics)"
@@ -143,10 +143,7 @@ resource "aws_cloudwatch_metric_alarm" "database_downtime_alarm" {
   
   treat_missing_data = "breaching"
   
-  # Belangrijk: Lambda + SNS samen
-  alarm_actions = [
-    aws_sns_topic.alarms.arn,
-    aws_lambda_function.db_restarter.arn
-  ]
+  # Alleen SNS - EventBridge zorgt voor Lambda
+  alarm_actions = [aws_sns_topic.alarms.arn]
   ok_actions    = [aws_sns_topic.alarms.arn]
 }

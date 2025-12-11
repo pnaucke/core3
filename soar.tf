@@ -1,5 +1,4 @@
-# soar.tf - Database auto-restart na 1 minuut downtime
-
+# soar.tf - Database auto-restart met correcte trigger
 # Data voor account ID
 data "aws_caller_identity" "current" {}
 
@@ -19,7 +18,7 @@ resource "aws_iam_role" "lambda_role" {
   })
 }
 
-# 2. IAM Policy - alleen starten van HR database
+# 2. IAM Policy - permissies voor RDS en CloudWatch Logs
 resource "aws_iam_role_policy" "lambda_policy" {
   name = "lambda-db-restart-policy"
   role = aws_iam_role.lambda_role.id
@@ -42,7 +41,7 @@ resource "aws_iam_role_policy" "lambda_policy" {
           "logs:CreateLogStream",
           "logs:PutLogEvents"
         ]
-        Resource = "arn:aws:logs:*:*:*"
+        Resource = "*"
       }
     ]
   })
@@ -83,7 +82,7 @@ EOF
   }
 }
 
-# 4. Lambda functie (simpele Python code)
+# 4. Lambda functie
 resource "aws_lambda_function" "db_restarter" {
   filename      = data.archive_file.lambda_code.output_path
   function_name = "db-restarter"
@@ -104,11 +103,35 @@ resource "aws_lambda_function" "db_restarter" {
   ]
 }
 
-# 5. Toestemming voor CloudWatch om Lambda aan te roepen
-resource "aws_lambda_permission" "allow_cloudwatch" {
-  statement_id  = "AllowCloudWatch"
+# 5. EventBridge regel - DE ECHTE TRIGGER
+resource "aws_cloudwatch_event_rule" "db_downtime_rule" {
+  name        = "db-downtime-event-rule"
+  description = "Triggers when database downtime alarm goes to ALARM state"
+
+  event_pattern = jsonencode({
+    source      = ["aws.cloudwatch"]
+    detail-type = ["CloudWatch Alarm State Change"]
+    detail = {
+      alarmName = ["database-downtime-alarm"]
+      state = {
+        value = ["ALARM"]
+      }
+    }
+  })
+}
+
+# 6. EventBridge target dat de Lambda aanroept
+resource "aws_cloudwatch_event_target" "lambda_target" {
+  rule      = aws_cloudwatch_event_rule.db_downtime_rule.name
+  target_id = "lambda-target"
+  arn       = aws_lambda_function.db_restarter.arn
+}
+
+# 7. Toestemming voor EventBridge om Lambda aan te roepen
+resource "aws_lambda_permission" "allow_eventbridge" {
+  statement_id  = "AllowEventBridge"
   action        = "lambda:InvokeFunction"
   function_name = aws_lambda_function.db_restarter.function_name
   principal     = "events.amazonaws.com"
-  source_arn    = aws_cloudwatch_metric_alarm.database_downtime_alarm.arn
+  source_arn    = aws_cloudwatch_event_rule.db_downtime_rule.arn
 }
