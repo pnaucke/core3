@@ -1,4 +1,6 @@
+# monitoring.tf - Clean dashboard zonder kosten informatie
 
+# CloudWatch Dashboard
 resource "aws_cloudwatch_dashboard" "main_dashboard" {
   dashboard_name = "Innovatech-Monitoring"
   
@@ -45,105 +47,80 @@ resource "aws_cloudwatch_dashboard" "main_dashboard" {
         }
       },
       
-      # ======================= DATABASE PERFORMANCE =======================
+      # ======================= BACKUP STATUS =======================
       {
-        type = "metric"
+        type = "log"
+        width = 24
+        height = 6
+        properties = {
+          region = "eu-central-1"
+          title = "RDS Backup Status (Afgelopen 7 dagen)"
+          query = "SOURCE '/aws/backup/rds-backup' | stats count(*) by bin(1d), @message\n| sort @timestamp desc\n| limit 7"
+          view = "table"
+        }
+      },
+      
+      # ======================= MAANDELIJKSE KOSTEN =======================
+      {
+        type = "text"
         width = 12
         height = 6
         properties = {
-          metrics = [
-            ["AWS/RDS", "CPUUtilization", "DBInstanceIdentifier", "hr-database", { label = "DB CPU" }]
-          ]
-          period = 60
-          stat = "Average"
-          region = "eu-central-1"
-          title = "Database CPU"
-          view = "singleValue"
-          stacked = false
-          yAxis = {
-            left = { min = 0, max = 100 }
-          }
+          markdown = "## Database Kosten per Maand\n\n- RDS Instance: db.t3.micro = €13.14\n- Storage: 20GB GP2 = €2.30\n- Totaal: €15.44 per maand"
         }
       },
       
       {
-        type = "metric"
+        type = "text"
         width = 12
         height = 6
         properties = {
-          metrics = [
-            ["AWS/RDS", "DatabaseConnections", "DBInstanceIdentifier", "hr-database", { label = "DB Connections" }]
-          ]
-          period = 60
-          stat = "Average"
-          region = "eu-central-1"
-          title = "Database Connections"
-          view = "singleValue"
-          stacked = false
-          yAxis = {
-            left = { min = 0 }
-          }
-        }
-      },
-      
-      # ======================= LOAD BALANCER METRICS =======================
-      {
-        type = "metric"
-        width = 12
-        height = 6
-        properties = {
-          metrics = [
-            ["AWS/ApplicationELB", "RequestCount", "LoadBalancer", "web-lb-innovatech", { stat = "Sum", label = "Requests" }]
-          ]
-          period = 60
-          stat = "Sum"
-          region = "eu-central-1"
-          title = "Load Balancer Requests"
-          view = "timeSeries"
-          stacked = false
-        }
-      },
-      
-      {
-        type = "metric"
-        width = 12
-        height = 6
-        properties = {
-          metrics = [
-            ["AWS/ApplicationELB", "TargetResponseTime", "LoadBalancer", "web-lb-innovatech", { stat = "Average", label = "Response Time" }]
-          ]
-          period = 60
-          stat = "Average"
-          region = "eu-central-1"
-          title = "⏱Response Time"
-          view = "timeSeries"
-          stacked = false
-          yAxis = {
-            left = { min = 0, label = "Seconds" }
-          }
+          markdown = "## WebCluster Kosten per Maand\n\n- vCPU: 0.5 = €17.90\n- Memory: 1GB = €1.96\n- Totaal: €19.86 per maand"
         }
       }
     ]
   })
 }
 
-# Een SIMPELE WEKELIJKSE kosten alarm (werkt wel)
-resource "aws_cloudwatch_metric_alarm" "weekly_high_usage" {
-  alarm_name          = "weekly-high-usage-alert"
-  alarm_description   = "Waarschuwt bij hoge wekelijkse resource usage"
+# Alarm voor hoge CPU (> 80%)
+resource "aws_cloudwatch_metric_alarm" "high_cpu_alarm" {
+  alarm_name          = "high-cpu-alarm"
+  alarm_description   = "Waarschuwt bij CPU gebruik boven 80%"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = 1
-  threshold           = 80  # 80% CPU usage
-  treat_missing_data  = "missing"
+  threshold           = 80
+  period              = 300
   
-  # Gebruik bestaande CPU metric (die wel werkt)
   metric_name = "CPUUtilization"
   namespace   = "AWS/ECS"
   statistic   = "Average"
-  period      = 3600  # 1 uur (max 7 dagen voor alarms)
   
   dimensions = {
     ClusterName = "web-cluster"
     ServiceName = "webserver"
   }
+  
+  alarm_actions = []
+  ok_actions    = []
+}
+
+# Alarm voor gefaalde database backup
+resource "aws_cloudwatch_metric_alarm" "failed_backup_alarm" {
+  alarm_name          = "failed-backup-alarm"
+  alarm_description   = "Waarschuwt bij gefaalde database backup"
+  comparison_operator = "GreaterThanThreshold"
+  evaluation_periods  = 1
+  threshold           = 0
+  period              = 300
+  
+  metric_name = "BackupJobSuccess"
+  namespace   = "AWS/Backup"
+  statistic   = "Sum"
+  
+  dimensions = {
+    BackupVaultName = "rds-daily-backup-vault"
+  }
+  
+  alarm_actions = []
+  ok_actions    = []
 }
