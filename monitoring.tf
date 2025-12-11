@@ -47,16 +47,35 @@ resource "aws_cloudwatch_dashboard" "main_dashboard" {
         }
       },
       
-      # ======================= BACKUP STATUS =======================
+  # ======================= BACKUP STATUS (AFGELOPEN 7 DAGEN) =======================
       {
-        type = "log"
-        width = 24
+        type = "metric"
+        width = 12
         height = 6
         properties = {
-          region = "eu-central-1"
-          title = "RDS Backup Status (Afgelopen 7 dagen)"
-          query = "SOURCE '/aws/backup/rds-backup' | stats count(*) by bin(1d), @message | sort @timestamp desc | limit 7"
-          view = "table"
+          metrics = [ ["Backup", "SuccessfulBackupCount", { "label": "Geslaagd" }] ]
+          view    = "timeSeries"
+          stacked = false
+          region  = "eu-central-1"
+          title   = "Geslaagde Backups (7 dagen)"
+          stat    = "Sum"
+          period  = 86400 # Data gegroepeerd per dag
+          start   = "-P7D" # Startpunt: 7 dagen geleden
+        }
+      },
+      {
+        type = "metric"
+        width = 12
+        height = 6
+        properties = {
+          metrics = [ ["Backup", "FailedBackupCount", { "label": "Mislukt" }] ]
+          view    = "timeSeries"
+          stacked = false
+          region  = "eu-central-1"
+          title   = "Mislukte Backups (7 dagen)"
+          stat    = "Sum"
+          period  = 86400
+          start   = "-P7D"
         }
       },
       
