@@ -1,4 +1,5 @@
 # soar.tf - Database auto-restart na 1 minuut downtime
+
 # Data voor account ID
 data "aws_caller_identity" "current" {}
 
@@ -25,34 +26,29 @@ resource "aws_iam_role_policy" "lambda_policy" {
 
   policy = jsonencode({
     Version = "2012-10-17"
-    Statement = [{
-      Effect = "Allow"
-      Action = [
-        "rds:DescribeDBInstances",
-        "rds:StartDBInstance"
-      ]
-      Resource = "arn:aws:rds:eu-central-1:${data.aws_caller_identity.current.account_id}:db:hr-database"
-    }]
+    Statement = [
+      {
+        Effect = "Allow"
+        Action = [
+          "rds:DescribeDBInstances",
+          "rds:StartDBInstance"
+        ]
+        Resource = "arn:aws:rds:eu-central-1:${data.aws_caller_identity.current.account_id}:db:hr-database"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "logs:CreateLogGroup",
+          "logs:CreateLogStream",
+          "logs:PutLogEvents"
+        ]
+        Resource = "arn:aws:logs:*:*:*"
+      }
+    ]
   })
 }
 
-# 3. Lambda functie (simpele Python code)
-resource "aws_lambda_function" "db_restarter" {
-  filename      = "lambda_db_restart.zip"
-  function_name = "db-restarter"
-  role          = aws_iam_role.lambda_role.arn
-  handler       = "index.lambda_handler"
-  runtime       = "python3.9"
-  timeout       = 30
-
-  environment {
-    variables = {
-      DB_NAME = "hr-database"
-    }
-  }
-}
-
-# 4. Lambda code INLINE - Terraform maakt zelf zip
+# 3. Lambda code INLINE - Terraform maakt zelf zip
 data "archive_file" "lambda_code" {
   type        = "zip"
   output_path = "lambda_db_restart.zip"
@@ -85,6 +81,27 @@ def lambda_handler(event, context):
 EOF
     filename = "index.py"
   }
+}
+
+# 4. Lambda functie (simpele Python code)
+resource "aws_lambda_function" "db_restarter" {
+  filename      = data.archive_file.lambda_code.output_path
+  function_name = "db-restarter"
+  role          = aws_iam_role.lambda_role.arn
+  handler       = "index.lambda_handler"
+  runtime       = "python3.9"
+  timeout       = 30
+
+  environment {
+    variables = {
+      DB_NAME = "hr-database"
+    }
+  }
+
+  depends_on = [
+    aws_iam_role_policy.lambda_policy,
+    data.archive_file.lambda_code
+  ]
 }
 
 # 5. Toestemming voor CloudWatch om Lambda aan te roepen

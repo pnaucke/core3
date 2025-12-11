@@ -90,6 +90,18 @@ resource "aws_cloudwatch_dashboard" "main_dashboard" {
   })
 }
 
+# SNS topic voor alarms
+resource "aws_sns_topic" "alarms" {
+  name = "innovatech-alarms"
+}
+
+# SNS email subscription
+resource "aws_sns_topic_subscription" "email" {
+  topic_arn = aws_sns_topic.alarms.arn
+  protocol  = "email"
+  endpoint  = "554603@student.fontys.nl"
+}
+
 # Alarm voor hoge website CPU (> 80%)
 resource "aws_cloudwatch_metric_alarm" "high_cpu_alarm" {
   alarm_name          = "high-cpu-alarm"
@@ -131,10 +143,10 @@ resource "aws_cloudwatch_metric_alarm" "database_downtime_alarm" {
   
   treat_missing_data = "breaching"
   
-  # ✅ BELANGRIJK: Voeg de Lambda toe aan de acties
+  # Belangrijk: Lambda + SNS samen
   alarm_actions = [
     aws_sns_topic.alarms.arn,
-    aws_lambda_function.db_restarter.arn  # Lambda start de database
+    aws_lambda_function.db_restarter.arn
   ]
   ok_actions    = [aws_sns_topic.alarms.arn]
 }
