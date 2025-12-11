@@ -1,6 +1,4 @@
-# monitoring.tf - Met live kosten dashboard ZONDER fout alarm
 
-# CloudWatch Dashboard met live kosten
 resource "aws_cloudwatch_dashboard" "main_dashboard" {
   dashboard_name = "Innovatech-Monitoring"
   
@@ -18,7 +16,7 @@ resource "aws_cloudwatch_dashboard" "main_dashboard" {
           period = 60
           stat = "Average"
           region = "eu-central-1"
-          title = "🖥️ WebServer CPU"
+          title = "WebServer CPU"
           view = "singleValue"
           stacked = false
           yAxis = {
@@ -38,7 +36,7 @@ resource "aws_cloudwatch_dashboard" "main_dashboard" {
           period = 60
           stat = "Average"
           region = "eu-central-1"
-          title = "🧠 WebServer Memory"
+          title = "WebServer Memory"
           view = "singleValue"
           stacked = false
           yAxis = {
@@ -47,71 +45,82 @@ resource "aws_cloudwatch_dashboard" "main_dashboard" {
         }
       },
       
-      # ======================= LIVE KOSTEN WIDGET =======================
+      # ======================= DATABASE PERFORMANCE =======================
       {
         type = "metric"
-        width = 24
-        height = 8
+        width = 12
+        height = 6
         properties = {
           metrics = [
-            # RDS kosten metrics (indirect via gebruik)
-            ["AWS/RDS", "CPUUtilization", "DBInstanceIdentifier", "hr-database", { label = "DB CPU (€0.08 per uur)" }],
-            ["AWS/RDS", "DatabaseConnections", "DBInstanceIdentifier", "hr-database", { label = "Connections", yAxis = "right" }],
-            
-            # ECS kosten metrics (indirect via gebruik)
-            ["AWS/ECS", "CPUUtilization", "ServiceName", "webserver", "ClusterName", "web-cluster", { label = "Web CPU (€0.04 per uur)" }],
-            ["AWS/ECS", "MemoryUtilization", "ServiceName", "webserver", "ClusterName", "web-cluster", { label = "Web Memory", yAxis = "right" }]
+            ["AWS/RDS", "CPUUtilization", "DBInstanceIdentifier", "hr-database", { label = "DB CPU" }]
           ]
-          view = "timeSeries"
-          stacked = false
-          region = "eu-central-1"
-          period = 3600  # Elk uur
+          period = 60
           stat = "Average"
-          title = "💰 Live Kosten Indicatie (Resource Gebruik)",
+          region = "eu-central-1"
+          title = "Database CPU"
+          view = "singleValue"
+          stacked = false
           yAxis = {
-            left = { min = 0, max = 100, label = "CPU %" },
-            right = { min = 0, label = "Connections / Memory %" }
+            left = { min = 0, max = 100 }
           }
         }
       },
       
-      # ======================= KOSTEN BEREKENING =======================
       {
-        type = "text"
-        width = 24
-        height = 8
+        type = "metric"
+        width = 12
+        height = 6
         properties = {
-          markdown = <<-EOT
-# 📊 Live Kosten Breakdown
-
-## **Database (RDS MySQL)**
-- **Instance:** db.t3.micro = €0.018 per uur (€13.14/maand)
-- **Storage:** 20GB GP2 = €0.115 per GB/maand = €2.30/maand
-- **Totaal DB:** **±€15.44 per maand** (±€0.51 per dag)
-
-## **WebServer (ECS Fargate)**
-- **vCPU:** 0.5 = €0.02453 per uur (€17.90/maand)
-- **Memory:** 1GB = €0.00268 per uur (€1.96/maand)
-- **Totaal Web:** **±€19.86 per maand** (±€0.66 per dag)
-
-## **Totaal Infrastructure:**
-**🟢 ~€35.30 per maand** (~€1.17 per dag)
-
----
-
-### **💡 Realtime Kosten Tracking:**
-1. [AWS Cost Explorer](https://eu-central-1.console.aws.amazon.com/cost-management/home#/cost-explorer)
-2. [AWS Budgets Dashboard](https://eu-central-1.console.aws.amazon.com/cost-management/home#/budgets)
-3. **Maandelijkse kosten:** `aws ce get-cost-and-usage --time-period Start=2024-01-01,End=2024-01-31 --granularity MONTHLY --metrics BlendedCost`
-
-### **🔔 Kosten Alert Setup:**
-Maak handmatig een budget in AWS Console:
-1. Ga naar **AWS Cost Management → Budgets**
-2. Klik op **Create budget**
-3. Kies **Cost budget** → Maandelijks
-4. Stel limiet in: **€50 per maand**
-5. Configureer alerts bij 80% en 100%
-          EOT
+          metrics = [
+            ["AWS/RDS", "DatabaseConnections", "DBInstanceIdentifier", "hr-database", { label = "DB Connections" }]
+          ]
+          period = 60
+          stat = "Average"
+          region = "eu-central-1"
+          title = "Database Connections"
+          view = "singleValue"
+          stacked = false
+          yAxis = {
+            left = { min = 0 }
+          }
+        }
+      },
+      
+      # ======================= LOAD BALANCER METRICS =======================
+      {
+        type = "metric"
+        width = 12
+        height = 6
+        properties = {
+          metrics = [
+            ["AWS/ApplicationELB", "RequestCount", "LoadBalancer", "web-lb-innovatech", { stat = "Sum", label = "Requests" }]
+          ]
+          period = 60
+          stat = "Sum"
+          region = "eu-central-1"
+          title = "Load Balancer Requests"
+          view = "timeSeries"
+          stacked = false
+        }
+      },
+      
+      {
+        type = "metric"
+        width = 12
+        height = 6
+        properties = {
+          metrics = [
+            ["AWS/ApplicationELB", "TargetResponseTime", "LoadBalancer", "web-lb-innovatech", { stat = "Average", label = "Response Time" }]
+          ]
+          period = 60
+          stat = "Average"
+          region = "eu-central-1"
+          title = "⏱Response Time"
+          view = "timeSeries"
+          stacked = false
+          yAxis = {
+            left = { min = 0, label = "Seconds" }
+          }
         }
       }
     ]
