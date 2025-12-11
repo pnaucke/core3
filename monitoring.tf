@@ -90,18 +90,6 @@ resource "aws_cloudwatch_dashboard" "main_dashboard" {
   })
 }
 
-# SNS topic voor alarms
-resource "aws_sns_topic" "alarms" {
-  name = "innovatech-alarms"
-}
-
-# SNS email subscription
-resource "aws_sns_topic_subscription" "email" {
-  topic_arn = aws_sns_topic.alarms.arn
-  protocol  = "email"
-  endpoint  = "554603@student.fontys.nl"
-}
-
 # Alarm voor hoge website CPU (> 80%)
 resource "aws_cloudwatch_metric_alarm" "high_cpu_alarm" {
   alarm_name          = "high-cpu-alarm"
