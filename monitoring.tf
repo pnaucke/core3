@@ -1,4 +1,4 @@
-# monitoring.tf - Dashboard zonder backup, met database beschikbaarheid
+# monitoring.tf - Dashboard met werkende database status monitoring
 
 # CloudWatch Dashboard
 resource "aws_cloudwatch_dashboard" "main_dashboard" {
@@ -47,45 +47,24 @@ resource "aws_cloudwatch_dashboard" "main_dashboard" {
         }
       },
       
-      # ======================= DATABASE STATUS (UP/DOWN) =======================
+      # ======================= DATABASE STATUS (UP/DOWN) - GECORRIGEERD =======================
       {
         type = "metric"
         width = 12
         height = 6
         properties = {
           metrics = [
-            ["AWS/RDS", "DatabaseConnections", "DBInstanceIdentifier", "hr-database", { 
-              stat = "Average", 
-              label = "Database Status",
-              # Deze expressie zet verbindingen om naar 1=Up, 0=Down voor display
-              expression = "IF(m1>0,1,0)", 
-              id = "e1",
-              visible = false
-            }],
-            [{"expression": "IF(m1>0,1,0)", "label": "Up", "id": "e1", "period": 60}]
-          ]
-          period = 60
-          stat = "Average"
-          region = "eu-central-1"
-          title = "Database Status (Up/Down)"
-          view = "singleValue"
-          stacked = false
+            [ "AWS/RDS", "DatabaseConnections", "DBInstanceIdentifier", "hr-database", { "id": "m1", "visible": false } ],
+            [ { "expression": "IF(m1>0,1,0)", "label": "Database Status", "id": "e1" } ]
+          ],
+          view = "timeSeries",
+          stacked = false,
+          region = "eu-central-1",
+          title = "Database Status (1=Up, 0=Down)",
+          stat = "Average",
+          period = 60,
           yAxis = {
-            left = { min = 0, max = 1 }
-          }
-          annotations = {
-            horizontal = [
-              {
-                color = "#2ca02c",
-                label = "Up",
-                value = 1
-              },
-              {
-                color = "#d62728", 
-                label = "Down",
-                value = 0
-              }
-            ]
+            left = { "min": 0, "max": 1 }
           }
         }
       },
