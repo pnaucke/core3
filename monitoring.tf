@@ -54,12 +54,12 @@ resource "aws_cloudwatch_dashboard" "main_dashboard" {
         height = 6
         properties = {
           metrics = [
-            ["AWS/RDS", "DatabaseConnections", "DBInstanceIdentifier", "hr-database", { stat = "Average", label = "Database Connections" }]
+            ["AWS/RDS", "DatabaseConnections", "DBInstanceIdentifier", "hr-database", { stat = "Average", label = "Database Connecties" }]
           ]
           period = 60
           stat = "Average"
           region = "eu-central-1"
-          title = "Database Uptime (Connecties)"
+          title = "Database Status (Connecties)"
           view = "singleValue"
           stacked = false
         }
@@ -109,14 +109,14 @@ resource "aws_cloudwatch_metric_alarm" "high_cpu_alarm" {
   ok_actions    = []
 }
 
-# Alarm voor database downtime (0 connecties voor 1 minuut)
+# Alarm voor database downtime - Kijkt naar ontbrekende metrics (database niet running)
 resource "aws_cloudwatch_metric_alarm" "database_downtime_alarm" {
   alarm_name          = "database-downtime-alarm"
-  alarm_description   = "Waarschuwt bij database downtime (0 connecties voor 1 minuut)"
-  comparison_operator = "LessThanOrEqualToThreshold"
+  alarm_description   = "Waarschuwt bij database downtime (geen metrics = database niet running)"
+  comparison_operator = "LessThanThreshold"
   evaluation_periods  = 1
-  threshold           = 0
-  period              = 60  # 60 seconden = 1 minuut
+  threshold           = 0.1  # Als er minder dan 0.1 connecties zijn (bijna 0)
+  period              = 60   # 60 seconden = 1 minuut
   
   metric_name = "DatabaseConnections"
   namespace   = "AWS/RDS"
@@ -125,6 +125,9 @@ resource "aws_cloudwatch_metric_alarm" "database_downtime_alarm" {
   dimensions = {
     DBInstanceIdentifier = "hr-database"
   }
+  
+  # BELANGRIJK: Behandel ontbrekende data als "slecht" (database down)
+  treat_missing_data = "breaching"
   
   alarm_actions = []
   ok_actions    = []
