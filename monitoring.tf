@@ -55,7 +55,16 @@ resource "aws_cloudwatch_dashboard" "main_dashboard" {
         properties = {
           region = "eu-central-1"
           title = "RDS Backup Status (Afgelopen 7 dagen)"
-          query = "SOURCE '/aws/backup/rds-backup' | stats count(*) by bin(1d), @message\n| sort @timestamp desc\n| limit 7"
+          # 🔧 Aangepaste query: Controleert eerst of er logs zijn
+          query = <<-EOT
+            SOURCE '/aws/backup/rds-backup' 
+            | stats count(*) as logCount
+            | filter logCount > 0
+            | SOURCE '/aws/backup/rds-backup' 
+            | stats count(*) by bin(1d), @message
+            | sort @timestamp desc
+            | limit 7
+          EOT
           view = "table"
         }
       },
@@ -80,47 +89,4 @@ resource "aws_cloudwatch_dashboard" "main_dashboard" {
       }
     ]
   })
-}
-
-# Alarm voor hoge CPU (> 80%)
-resource "aws_cloudwatch_metric_alarm" "high_cpu_alarm" {
-  alarm_name          = "high-cpu-alarm"
-  alarm_description   = "Waarschuwt bij CPU gebruik boven 80%"
-  comparison_operator = "GreaterThanThreshold"
-  evaluation_periods  = 1
-  threshold           = 80
-  period              = 300
-  
-  metric_name = "CPUUtilization"
-  namespace   = "AWS/ECS"
-  statistic   = "Average"
-  
-  dimensions = {
-    ClusterName = "web-cluster"
-    ServiceName = "webserver"
-  }
-  
-  alarm_actions = []
-  ok_actions    = []
-}
-
-# Alarm voor gefaalde database backup
-resource "aws_cloudwatch_metric_alarm" "failed_backup_alarm" {
-  alarm_name          = "failed-backup-alarm"
-  alarm_description   = "Waarschuwt bij gefaalde database backup"
-  comparison_operator = "GreaterThanThreshold"
-  evaluation_periods  = 1
-  threshold           = 0
-  period              = 300
-  
-  metric_name = "BackupJobSuccess"
-  namespace   = "AWS/Backup"
-  statistic   = "Sum"
-  
-  dimensions = {
-    BackupVaultName = "rds-daily-backup-vault"
-  }
-  
-  alarm_actions = []
-  ok_actions    = []
 }
