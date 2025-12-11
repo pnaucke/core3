@@ -1,4 +1,4 @@
-# monitoring.tf - Dashboard zonder backup, met database netwerk status
+# monitoring.tf - Dashboard zonder backup, met database beschikbaarheid
 
 # CloudWatch Dashboard
 resource "aws_cloudwatch_dashboard" "main_dashboard" {
@@ -47,40 +47,45 @@ resource "aws_cloudwatch_dashboard" "main_dashboard" {
         }
       },
       
-      # ======================= DATABASE NETWORK STATUS =======================
+      # ======================= DATABASE STATUS (UP/DOWN) =======================
       {
         type = "metric"
         width = 12
         height = 6
         properties = {
           metrics = [
-            ["AWS/RDS", "DatabaseConnections", "DBInstanceIdentifier", "hr-database", { stat = "Average", label = "Database Connections" }]
+            ["AWS/RDS", "DatabaseConnections", "DBInstanceIdentifier", "hr-database", { 
+              stat = "Average", 
+              label = "Database Status",
+              # Deze expressie zet verbindingen om naar 1=Up, 0=Down voor display
+              expression = "IF(m1>0,1,0)", 
+              id = "e1",
+              visible = false
+            }],
+            [{"expression": "IF(m1>0,1,0)", "label": "Up", "id": "e1", "period": 60}]
           ]
           period = 60
           stat = "Average"
           region = "eu-central-1"
-          title = "Database Connections"
-          view = "singleValue"
-          stacked = false
-        }
-      },
-      
-      {
-        type = "metric"
-        width = 12
-        height = 6
-        properties = {
-          metrics = [
-            ["AWS/RDS", "CPUUtilization", "DBInstanceIdentifier", "hr-database", { stat = "Average", label = "Database CPU" }]
-          ]
-          period = 60
-          stat = "Average"
-          region = "eu-central-1"
-          title = "Database CPU"
+          title = "Database Status (Up/Down)"
           view = "singleValue"
           stacked = false
           yAxis = {
-            left = { min = 0, max = 100 }
+            left = { min = 0, max = 1 }
+          }
+          annotations = {
+            horizontal = [
+              {
+                color = "#2ca02c",
+                label = "Up",
+                value = 1
+              },
+              {
+                color = "#d62728", 
+                label = "Down",
+                value = 0
+              }
+            ]
           }
         }
       },
@@ -129,13 +134,13 @@ resource "aws_cloudwatch_metric_alarm" "high_cpu_alarm" {
   ok_actions    = []
 }
 
-# NIEUW: Alarm voor database beschikbaarheid (1 minuut offline)
+# Alarm voor database offline (1 minuut geen verbindingen)
 resource "aws_cloudwatch_metric_alarm" "database_down" {
   alarm_name          = "database-down-alarm"
-  alarm_description   = "Waarschuwt als de database 1 minuut offline is"
+  alarm_description   = "Waarschuwt als de database 1 minuut offline is (0 verbindingen)"
   comparison_operator = "LessThanThreshold"
   evaluation_periods  = 1
-  threshold           = 1  # Minder dan 1 verbinding gedurende 1 minuut
+  threshold           = 1  # Minder dan 1 verbinding gedurende 1 minuut = offline
   period              = 60 # 1 minuut
   
   metric_name = "DatabaseConnections"
