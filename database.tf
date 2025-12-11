@@ -15,17 +15,17 @@ resource "aws_db_parameter_group" "hr_db_params" {
 
   parameter {
     name  = "general_log"
-    value = "1"  # Zet general log aan
+    value = "1"
   }
 
   parameter {
     name  = "slow_query_log"
-    value = "1"  # Zet slow query log aan
+    value = "1"
   }
 
   parameter {
     name  = "log_output"
-    value = "FILE"  # Log naar bestand (nodig voor CloudWatch)
+    value = "FILE"
   }
 
   tags = {
@@ -51,8 +51,7 @@ resource "aws_db_instance" "hr_database" {
   
   publicly_accessible    = false
   skip_final_snapshot    = true
-  
-  # 👇 LOGGING CONFIGURATIE (ZONDER monitoring_role_arn) 👇
+
   enabled_cloudwatch_logs_exports = ["general", "slowquery"]
   parameter_group_name = aws_db_parameter_group.hr_db_params.name
   

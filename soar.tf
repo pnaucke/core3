@@ -1,8 +1,5 @@
-# soar.tf - Database auto-restart met complete logging
-# Data voor account ID
 data "aws_caller_identity" "current" {}
 
-# 1. IAM Role voor Lambda
 resource "aws_iam_role" "lambda_role" {
   name = "lambda-db-restart-role"
 
@@ -18,7 +15,6 @@ resource "aws_iam_role" "lambda_role" {
   })
 }
 
-# 2. IAM Policy - permissies voor RDS en CloudWatch Logs
 resource "aws_iam_role_policy" "lambda_policy" {
   name = "lambda-db-restart-policy"
   role = aws_iam_role.lambda_role.id
@@ -47,7 +43,6 @@ resource "aws_iam_role_policy" "lambda_policy" {
   })
 }
 
-# 3. Lambda code INLINE met database status logging
 data "archive_file" "lambda_code" {
   type        = "zip"
   output_path = "lambda_db_restart.zip"
@@ -151,7 +146,6 @@ EOF
   }
 }
 
-# 4. Lambda functie
 resource "aws_lambda_function" "db_restarter" {
   filename      = data.archive_file.lambda_code.output_path
   function_name = "db-restarter"
@@ -172,7 +166,6 @@ resource "aws_lambda_function" "db_restarter" {
   ]
 }
 
-# 5. EventBridge regel - DE TRIGGER
 resource "aws_cloudwatch_event_rule" "db_downtime_rule" {
   name        = "db-downtime-event-rule"
   description = "Triggers when database downtime alarm goes to ALARM state"
@@ -189,14 +182,12 @@ resource "aws_cloudwatch_event_rule" "db_downtime_rule" {
   })
 }
 
-# 6. EventBridge target dat de Lambda aanroept
 resource "aws_cloudwatch_event_target" "lambda_target" {
   rule      = aws_cloudwatch_event_rule.db_downtime_rule.name
   target_id = "lambda-target"
   arn       = aws_lambda_function.db_restarter.arn
 }
 
-# 7. Toestemming voor EventBridge om Lambda aan te roepen
 resource "aws_lambda_permission" "allow_eventbridge" {
   statement_id  = "AllowEventBridge"
   action        = "lambda:InvokeFunction"

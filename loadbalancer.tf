@@ -37,7 +37,6 @@ resource "aws_lb_target_group" "webserver" {
   }
 }
 
-# ALLEEN HTTP Listener (poort 80)
 resource "aws_lb_listener" "http" {
   load_balancer_arn = aws_lb.web_lb.arn
   port              = 80

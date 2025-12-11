@@ -82,7 +82,7 @@ resource "aws_ecs_service" "webserver" {
   network_configuration {
     subnets = [aws_subnet.subnet_web1.id, aws_subnet.subnet_web2.id]
     security_groups  = [aws_security_group.sg_webserver.id]
-    assign_public_ip = true  # TRUE voor internet toegang
+    assign_public_ip = false
   }
 
   load_balancer {
@@ -94,7 +94,6 @@ resource "aws_ecs_service" "webserver" {
   depends_on = [aws_lb_listener.http]
 }
 
-# IAM Role voor ECS
 resource "aws_iam_role" "ecs_task_execution_role" {
   name = "ecs-task-execution-role"
 
@@ -122,7 +121,6 @@ resource "aws_iam_role_policy_attachment" "ecr_policy" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
 }
 
-# CloudWatch Logs groep
 resource "aws_cloudwatch_log_group" "ecs_logs" {
   name              = "/ecs/webserver"
   retention_in_days = 7

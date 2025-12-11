@@ -1,12 +1,10 @@
-# monitoring.tf - Dashboard met werkende database status monitoring
-
-# CloudWatch Dashboard
 resource "aws_cloudwatch_dashboard" "main_dashboard" {
   dashboard_name = "Innovatech-Monitoring"
   
   dashboard_body = jsonencode({
     widgets = [
-      # ======================= HEALTH & PERFORMANCE =======================
+
+#webserver metrics
       {
         type = "metric"
         width = 12
@@ -47,7 +45,7 @@ resource "aws_cloudwatch_dashboard" "main_dashboard" {
         }
       },
       
-      # ======================= DATABASE UPTIME =======================
+#database metrics
       {
         type = "metric"
         width = 12
@@ -68,7 +66,7 @@ resource "aws_cloudwatch_dashboard" "main_dashboard" {
         }
       },
       
-      # ======================= MAANDELIJKSE KOSTEN =======================
+#aws cost widgets
       {
         type = "text"
         width = 12
@@ -102,7 +100,7 @@ resource "aws_sns_topic_subscription" "email" {
   endpoint  = "554603@student.fontys.nl"
 }
 
-# Alarm voor hoge website CPU (> 80%)
+# Alarm for high CPU webserver
 resource "aws_cloudwatch_metric_alarm" "high_cpu_alarm" {
   alarm_name          = "high-cpu-alarm"
   alarm_description   = "Website CPU boven 80%"
@@ -124,7 +122,7 @@ resource "aws_cloudwatch_metric_alarm" "high_cpu_alarm" {
   ok_actions    = [aws_sns_topic.alarms.arn]
 }
 
-# Alarm voor database downtime (in monitoring.tf)
+# Alarm for database downtime
 resource "aws_cloudwatch_metric_alarm" "database_downtime_alarm" {
   alarm_name          = "database-downtime-alarm"
   alarm_description   = "Database is down (geen CPU metrics)"
@@ -143,7 +141,6 @@ resource "aws_cloudwatch_metric_alarm" "database_downtime_alarm" {
   
   treat_missing_data = "breaching"
   
-  # Alleen SNS - EventBridge zorgt voor Lambda
   alarm_actions = [aws_sns_topic.alarms.arn]
   ok_actions    = [aws_sns_topic.alarms.arn]
 }
