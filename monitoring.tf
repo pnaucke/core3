@@ -90,10 +90,22 @@ resource "aws_cloudwatch_dashboard" "main_dashboard" {
   })
 }
 
-# Alarm voor hoge CPU (> 80%)
+# SNS topic voor alarms
+resource "aws_sns_topic" "alarms" {
+  name = "innovatech-alarms"
+}
+
+# SNS email subscription
+resource "aws_sns_topic_subscription" "email" {
+  topic_arn = aws_sns_topic.alarms.arn
+  protocol  = "email"
+  endpoint  = "554603@student.fontys.nl"
+}
+
+# Alarm voor hoge website CPU (> 80%)
 resource "aws_cloudwatch_metric_alarm" "high_cpu_alarm" {
   alarm_name          = "high-cpu-alarm"
-  alarm_description   = "Waarschuwt bij CPU gebruik boven 80%"
+  alarm_description   = "Website CPU boven 80%"
   comparison_operator = "GreaterThanThreshold"
   evaluation_periods  = 1
   threshold           = 80
@@ -108,18 +120,18 @@ resource "aws_cloudwatch_metric_alarm" "high_cpu_alarm" {
     ServiceName = "webserver"
   }
   
-  alarm_actions = []
-  ok_actions    = []
+  alarm_actions = [aws_sns_topic.alarms.arn]
+  ok_actions    = [aws_sns_topic.alarms.arn]
 }
 
-# Alarm voor database downtime - Detecteert wanneer CPU metric verdwijnt (database down)
+# Alarm voor database downtime
 resource "aws_cloudwatch_metric_alarm" "database_downtime_alarm" {
   alarm_name          = "database-downtime-alarm"
-  alarm_description   = "Waarschuwt bij database downtime (geen CPU metrics = database niet running)"
+  alarm_description   = "Database is down (geen CPU metrics)"
   comparison_operator = "LessThanThreshold"
   evaluation_periods  = 1
-  threshold           = 0.01  # Zelfs als CPU 0% is maar metric bestaat, dan is database up
-  period              = 60    # 60 seconden = 1 minuut
+  threshold           = 0.01
+  period              = 60
   
   metric_name = "CPUUtilization"
   namespace   = "AWS/RDS"
@@ -129,9 +141,8 @@ resource "aws_cloudwatch_metric_alarm" "database_downtime_alarm" {
     DBInstanceIdentifier = "hr-database"
   }
   
-  # BELANGRIJK: Als er geen CPU data is (missing), dan is database down
   treat_missing_data = "breaching"
   
-  alarm_actions = []
-  ok_actions    = []
+  alarm_actions = [aws_sns_topic.alarms.arn]
+  ok_actions    = [aws_sns_topic.alarms.arn]
 }
