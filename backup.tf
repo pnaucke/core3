@@ -26,7 +26,7 @@ resource "aws_iam_role_policy_attachment" "backup_policy" {
 # 2. Backup Vault (waar backups worden opgeslagen)
 resource "aws_backup_vault" "rds_backup_vault" {
   name        = "rds-daily-backup-vault"
-  kms_key_arn = "alias/aws/backup"
+  # De 'kms_key_arn' regel is verwijderd. AWS Backup gebruikt nu zijn standaard key.
 
   tags = {
     Name      = "rds-daily-backup-vault"
