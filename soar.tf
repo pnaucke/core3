@@ -1,4 +1,4 @@
-# soar.tf - Database auto-restart met correcte trigger
+# soar.tf - Database auto-restart met complete logging
 # Data voor account ID
 data "aws_caller_identity" "current" {}
 
@@ -47,7 +47,7 @@ resource "aws_iam_role_policy" "lambda_policy" {
   })
 }
 
-# 3. Lambda code INLINE - Terraform maakt zelf zip
+# 3. Lambda code INLINE met database status logging
 data "archive_file" "lambda_code" {
   type        = "zip"
   output_path = "lambda_db_restart.zip"
@@ -56,27 +56,96 @@ data "archive_file" "lambda_code" {
     content  = <<EOF
 import boto3
 import json
+import datetime
+import os
+
+def write_status_log(message, status_type="INFO"):
+    """Schrijft een log entry naar de database status log group"""
+    try:
+        logs_client = boto3.client('logs')
+        log_group = '/innovatech/database/status'
+        log_stream = 'events'
+        
+        # Maak timestamp
+        timestamp = int(datetime.datetime.now().timestamp() * 1000)
+        
+        # Schrijf log event
+        logs_client.put_log_events(
+            logGroupName=log_group,
+            logStreamName=log_stream,
+            logEvents=[
+                {
+                    'timestamp': timestamp,
+                    'message': f"[{status_type}] {message}"
+                }
+            ]
+        )
+        print(f"Status gelogd: {message}")
+    except logs_client.exceptions.ResourceNotFoundException:
+        # Maak log stream aan als die niet bestaat
+        try:
+            logs_client.create_log_stream(
+                logGroupName=log_group,
+                logStreamName=log_stream
+            )
+            # Probeer opnieuw
+            logs_client.put_log_events(
+                logGroupName=log_group,
+                logStreamName=log_stream,
+                logEvents=[
+                    {
+                        'timestamp': timestamp,
+                        'message': f"[{status_type}] {message}"
+                    }
+                ]
+            )
+        except Exception as e:
+            print(f"Kan geen log stream aanmaken: {e}")
+    except Exception as e:
+        print(f"Log schrijven mislukt: {e}")
 
 def lambda_handler(event, context):
     db_id = "hr-database"
     rds = boto3.client('rds')
     
     try:
+        # Log dat Lambda is getriggerd
+        trigger_type = event.get('detail-type', 'Direct')
+        write_status_log(f"Lambda getriggerd door: {trigger_type}", "INFO")
+        
         # Check database status
         response = rds.describe_db_instances(DBInstanceIdentifier=db_id)
         status = response['DBInstances'][0]['DBInstanceStatus']
         
+        write_status_log(f"Database status: {status}", "INFO")
+        
         if status == "stopped":
+            write_status_log("Database is gestopt. Start automatisch...", "CRITICAL")
             print(f"Database {db_id} is stopped. Starting...")
-            rds.start_db_instance(DBInstanceIdentifier=db_id)
-            return {"status": "started", "message": f"Database {db_id} is being started"}
+            
+            # Start database
+            start_response = rds.start_db_instance(DBInstanceIdentifier=db_id)
+            write_status_log("Database start commando uitgevoerd", "ACTION")
+            
+            return {
+                "status": "started", 
+                "message": f"Database {db_id} is being started"
+            }
         else:
+            write_status_log(f"Geen actie nodig - status is {status}", "INFO")
             print(f"Database status: {status}. No action needed.")
             return {"status": "ok", "message": f"Database is {status}"}
             
+    except rds.exceptions.DBInstanceNotFoundFault:
+        error_msg = "Database niet gevonden!"
+        write_status_log(error_msg, "ERROR")
+        return {"status": "error", "message": error_msg}
+        
     except Exception as e:
+        error_msg = f"Fout: {str(e)}"
+        write_status_log(error_msg, "ERROR")
         print(f"Error: {str(e)}")
-        return {"status": "error", "message": str(e)}
+        raise e
 EOF
     filename = "index.py"
   }
@@ -103,7 +172,7 @@ resource "aws_lambda_function" "db_restarter" {
   ]
 }
 
-# 5. EventBridge regel - DE ECHTE TRIGGER
+# 5. EventBridge regel - DE TRIGGER
 resource "aws_cloudwatch_event_rule" "db_downtime_rule" {
   name        = "db-downtime-event-rule"
   description = "Triggers when database downtime alarm goes to ALARM state"
