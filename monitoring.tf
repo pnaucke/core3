@@ -47,25 +47,21 @@ resource "aws_cloudwatch_dashboard" "main_dashboard" {
         }
       },
       
-      # ======================= DATABASE STATUS (UP/DOWN) - GECORRIGEERD =======================
+      # ======================= DATABASE UPTIME =======================
       {
         type = "metric"
         width = 12
         height = 6
         properties = {
           metrics = [
-            [ "AWS/RDS", "DatabaseConnections", "DBInstanceIdentifier", "hr-database", { "id": "m1", "visible": false } ],
-            [ { "expression": "IF(m1>0,1,0)", "label": "Database Status", "id": "e1" } ]
-          ],
-          view = "timeSeries",
-          stacked = false,
-          region = "eu-central-1",
-          title = "Database Status (1=Up, 0=Down)",
-          stat = "Average",
-          period = 60,
-          yAxis = {
-            left = { "min": 0, "max": 1 }
-          }
+            ["AWS/RDS", "DatabaseConnections", "DBInstanceIdentifier", "hr-database", { stat = "Average", label = "Database Connections" }]
+          ]
+          period = 60
+          stat = "Average"
+          region = "eu-central-1"
+          title = "Database Uptime (Connecties)"
+          view = "singleValue"
+          stacked = false
         }
       },
       
@@ -113,14 +109,14 @@ resource "aws_cloudwatch_metric_alarm" "high_cpu_alarm" {
   ok_actions    = []
 }
 
-# Alarm voor database offline (1 minuut geen verbindingen)
-resource "aws_cloudwatch_metric_alarm" "database_down" {
-  alarm_name          = "database-down-alarm"
-  alarm_description   = "Waarschuwt als de database 1 minuut offline is (0 verbindingen)"
-  comparison_operator = "LessThanThreshold"
+# Alarm voor database downtime (0 connecties voor 1 minuut)
+resource "aws_cloudwatch_metric_alarm" "database_downtime_alarm" {
+  alarm_name          = "database-downtime-alarm"
+  alarm_description   = "Waarschuwt bij database downtime (0 connecties voor 1 minuut)"
+  comparison_operator = "LessThanOrEqualToThreshold"
   evaluation_periods  = 1
-  threshold           = 1  # Minder dan 1 verbinding gedurende 1 minuut = offline
-  period              = 60 # 1 minuut
+  threshold           = 0
+  period              = 60  # 60 seconden = 1 minuut
   
   metric_name = "DatabaseConnections"
   namespace   = "AWS/RDS"
@@ -130,6 +126,6 @@ resource "aws_cloudwatch_metric_alarm" "database_down" {
     DBInstanceIdentifier = "hr-database"
   }
   
-  alarm_actions = []  # Vul hier later een SNS Topic ARN in voor meldingen
+  alarm_actions = []
   ok_actions    = []
 }
