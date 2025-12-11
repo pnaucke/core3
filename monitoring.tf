@@ -131,6 +131,10 @@ resource "aws_cloudwatch_metric_alarm" "database_downtime_alarm" {
   
   treat_missing_data = "breaching"
   
-  alarm_actions = [aws_sns_topic.alarms.arn]
+  # ✅ BELANGRIJK: Voeg de Lambda toe aan de acties
+  alarm_actions = [
+    aws_sns_topic.alarms.arn,
+    aws_lambda_function.db_restarter.arn  # Lambda start de database
+  ]
   ok_actions    = [aws_sns_topic.alarms.arn]
 }

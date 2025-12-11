@@ -95,31 +95,3 @@ resource "aws_lambda_permission" "allow_cloudwatch" {
   principal     = "events.amazonaws.com"
   source_arn    = aws_cloudwatch_metric_alarm.database_downtime_alarm.arn
 }
-
-# 6. Update het bestaande alarm in monitoring.tf
-#    (Terraform zal dit overschrijven)
-resource "aws_cloudwatch_metric_alarm" "database_downtime_alarm" {
-  alarm_name          = "database-downtime-alarm"
-  alarm_description   = "Database is down (geen CPU metrics) - start automatisch na 1 min"
-  comparison_operator = "LessThanThreshold"
-  evaluation_periods  = 1    # 1 minuut
-  threshold           = 0.01
-  period              = 60   # 60 seconden
-  
-  metric_name = "CPUUtilization"
-  namespace   = "AWS/RDS"
-  statistic   = "Average"
-  
-  dimensions = {
-    DBInstanceIdentifier = "hr-database"
-  }
-  
-  treat_missing_data = "breaching"
-  
-  # Belangrijk: Lambda + SNS samen
-  alarm_actions = [
-    aws_sns_topic.alarms.arn,
-    aws_lambda_function.db_restarter.arn
-  ]
-  ok_actions    = [aws_sns_topic.alarms.arn]
-}
